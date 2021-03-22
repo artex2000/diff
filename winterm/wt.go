@@ -122,8 +122,8 @@ func InitScreen() (*Screen, error) {
 
 func (s *Screen) Close() {
         close(s.quit)
-        winSetConsoleActiveScreenBuffer(s.old_h)
         winFlushConsoleInputBuffer(s.in)
+        winSetConsoleActiveScreenBuffer(s.old_h)
         winSetConsoleMode(s.in, s.mode)
         close(s.Input)
 }
@@ -137,8 +137,18 @@ func (s *Screen) Flush() error {
         return winWriteConsoleOutput(s.new_h, s.Canvas.SizeX, s.Canvas.SizeY, data)
 }
 
-func (s *Screen) Resize(sx, sy uint16) error {
-        err := winSetConsoleScreenBufferSize(s.new_h, sx, sy)
+func (s *Screen) Resize(x, y uint16) error {
+        //Windows resize event coordinates may be unreliable
+        //Get new size from ScreenBufferInfo
+        i, err := winGetConsoleScreenBufferInfo(s.new_h)
+        if err != nil {
+               return err
+        }
+
+        sx := uint16(i.window.right - i.window.left + 1)
+        sy := uint16(i.window.bottom - i.window.top + 1)
+
+        err = winSetConsoleScreenBufferSize(s.new_h, sx, sy)
         if err != nil {
                 return err
         }
@@ -153,7 +163,7 @@ func (s *Screen) Resize(sx, sy uint16) error {
 func (s ScreenBuffer) Clear(color uint32) {
         for i, _ := range s.Data {
                 s.Data[i].Symbol = 0x20
-                s.Data[i].Color = color
+                s.Data[i].Color = color << 4
         }
 }
 
@@ -188,7 +198,7 @@ func pollEvent(s *Screen) {
         for { 
                 select {
                 case <-s.quit:
-                        break
+                        return
                 default:
                 }
                 if ev, ok := winReadConsoleInput(s.in); ok {
