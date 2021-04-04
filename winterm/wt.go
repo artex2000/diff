@@ -13,8 +13,8 @@ const (
         GRAY_FONT_1    uint32 = 0x000B
         GRAY_FONT_3    uint32 = 0x000C
         GRAY_FONT_4    uint32 = 0x000E
-        LIGTH_BASE_0   uint32 = 0x0007
-        LIGTH_BASE_1   uint32 = 0x000F
+        LIGHT_BASE_0   uint32 = 0x0007
+        LIGHT_BASE_1   uint32 = 0x000F
 
         ACCENT_RED     uint32 = 0x0001
         ACCENT_GREEN   uint32 = 0x0002
@@ -43,8 +43,8 @@ type Cell struct {
 }
 
 type ScreenBuffer struct {
-        SizeX uint16
-        SizeY uint16
+        SizeX int
+        SizeY int
         Data  []Cell    
 }
 
@@ -64,14 +64,14 @@ type KeyEventRecord struct {
 }
 
 type MouseEventRecord struct {
-        X,Y      uint16
+        X,Y      int
         Buttons  uint32
         Control  uint32
 }
 
 type SizeEventRecord struct {
-        SizeX   uint16
-        SizeY   uint16
+        SizeX   int
+        SizeY   int
 }
 
 type Screen struct {
@@ -137,7 +137,7 @@ func (s *Screen) Flush() error {
         return winWriteConsoleOutput(s.new_h, s.Canvas.SizeX, s.Canvas.SizeY, data)
 }
 
-func (s *Screen) Resize(x, y uint16) error {
+func (s *Screen) Resize(x, y int) error {
         //Windows resize event coordinates may be unreliable
         //Get new size from ScreenBufferInfo
         i, err := winGetConsoleScreenBufferInfo(s.new_h)
@@ -145,8 +145,8 @@ func (s *Screen) Resize(x, y uint16) error {
                return err
         }
 
-        sx := uint16(i.window.right - i.window.left + 1)
-        sy := uint16(i.window.bottom - i.window.top + 1)
+        sx := int(i.window.right - i.window.left + 1)
+        sy := int(i.window.bottom - i.window.top + 1)
 
         err = winSetConsoleScreenBufferSize(s.new_h, sx, sy)
         if err != nil {
@@ -167,7 +167,7 @@ func (s ScreenBuffer) Clear(color uint32) {
         }
 }
 
-func (s ScreenBuffer) WriteChar(c rune, x, y uint16, color uint32) {
+func (s ScreenBuffer) WriteChar(c rune, x, y int, color uint32) {
         if x >= s.SizeX || y >= s.SizeY {
                 return
         }
@@ -177,17 +177,16 @@ func (s ScreenBuffer) WriteChar(c rune, x, y uint16, color uint32) {
         s.Data[idx].Color = color
 }
 
-func (s ScreenBuffer) WriteLine(st string, x, y uint16, color uint32) {
+func (s ScreenBuffer) WriteLine(st string, x, y int, color uint32) {
         for _, c := range st {
                 s.WriteChar(c, x, y, color)
                 x += 1
         }
 }
 
-func (s ScreenBuffer) WriteRegion(t ScreenBuffer, x, y uint16) {
-        var tx, ty uint16
-        for ty = 0; ty < t.SizeY; ty++ {
-                for tx = 0; tx < t.SizeX; tx++ {
+func (s ScreenBuffer) WriteRegion(t ScreenBuffer, x, y int) {
+        for ty := 0; ty < t.SizeY; ty++ {
+                for tx := 0; tx < t.SizeX; tx++ {
                         idx := ty * t.SizeX + tx
                         s.WriteChar(t.Data[idx].Symbol, x + tx, y + ty, t.Data[idx].Color)
                 }
@@ -242,8 +241,8 @@ func translateEvent(e *input_record) *EventRecord {
 
                 r.When         = time.Now()
                 r.EventType    = SizeEvent
-                r.Size.SizeX   = uint16(s.size.x)
-                r.Size.SizeY   = uint16(s.size.y)
+                r.Size.SizeX   = int(s.size.x)
+                r.Size.SizeY   = int(s.size.y)
         }
         return &r
 }

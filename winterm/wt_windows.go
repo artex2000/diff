@@ -184,7 +184,7 @@ func winSetConsoleActiveScreenBuffer(h uintptr) error {
         }
 }
 
-func winSetConsoleScreenBufferSize(h uintptr, x, y uint16) error {
+func winSetConsoleScreenBufferSize(h uintptr, x, y int) error {
         c := coord{ short(x), short(y) }
         r, _, err := set_console_screen_buffer_size.Call(h, c.uptr())
         if r == 0 {
@@ -194,7 +194,7 @@ func winSetConsoleScreenBufferSize(h uintptr, x, y uint16) error {
         }
 }
 
-func winWriteConsoleOutput(h uintptr, x, y uint16, data uintptr) error {
+func winWriteConsoleOutput(h uintptr, x, y int, data uintptr) error {
         origin := coord{ 0, 0 }
         size   := coord{ short(x), short(y) }
         rect   := &small_rect { 0, 0, short(x - 1), short(y - 1) }
@@ -267,8 +267,8 @@ func initOutput(s *Screen) error {
         //Window max size reflects window size + scrolling (so maxY - 1 may be unvisible)
         //Rect shows correct current window size but is skewed to current visible line
         //So it is not from 0 to max visible, but depending on previous scrolling up
-        sx := uint16(i.window.right - i.window.left + 1)
-        sy := uint16(i.window.bottom - i.window.top + 1)
+        sx := int(i.window.right - i.window.left + 1)
+        sy := int(i.window.bottom - i.window.top + 1)
 
         h, err = winCreateConsoleScreenBuffer()
         if h == WIN_INVALID_HANDLE { //invalid handle
