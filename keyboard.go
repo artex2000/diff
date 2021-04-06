@@ -21,6 +21,7 @@ const (
         ButtonStateNone     = iota
         ButtonStateFocus
         ButtonStatePressed
+        ButtonStateUnresponsive
 )
 
 const (
@@ -90,26 +91,73 @@ type KeyboardView struct {
         //onto view exposed to view manager
         Texture         wt.ScreenBuffer
         Buttons         []*Button
+        Elapsed         int
         tx, ty          int             //texture origin in View canvas
         b_idx           int
+
+        started         bool
+}
+
+func (kv *KeyboardView) ProcessTimerEvent() int {
+        if !kv.started {
+                return ViewEventDiscard
+        }
+
+        kv.Elapsed += 1
+        if kv.Elapsed > 100 {
+                if kv.b_idx >= len (kv.Buttons) {
+                        return ViewEventDiscard
+                }
+
+                kv.Elapsed = 0
+                kv.Buttons[kv.b_idx].state = ButtonStateUnresponsive
+                kv.DrawButton(kv.Buttons[kv.b_idx])
+
+                kv.b_idx += 1
+                if kv.b_idx < len (kv.Buttons) {
+                        kv.Buttons[kv.b_idx].state = ButtonStateFocus
+                        kv.DrawButton(kv.Buttons[kv.b_idx])
+                }
+                kv.Draw()
+        }
+        return ViewEventDiscard
 }
 
 func (kv *KeyboardView) ProcessEvent(e wt.EventRecord) int {
         if e.EventType == wt.KeyEvent && e.Key.KeyDown {
-                switch e.Key.KeyCode {
-                case 0x1b:
-                        return ViewEventClose
-                default:
-                        /*
-                        kv.DrawButton(kv.Buttons[kv.b_idx], &kv.Canvas)
-                        kv.b_idx += 1
+                if !kv.started {
+                        kv.started = true
+                        kv.Buttons[kv.b_idx].state = ButtonStateFocus
+                        kv.DrawButton(kv.Buttons[kv.b_idx])
                         kv.Draw()
-                        */
                         return ViewEventDiscard
                 }
+
+                kv.Elapsed = 0                  //reset key-between timer
+                if e.Key.KeyCode == 0x1B {
+                        if (kv.b_idx != 0) && (kv.b_idx != 31) {
+                                return ViewEventClose
+                        }
+                }
+
+                if kv.b_idx >= len (kv.Buttons) {
+                        return ViewEventDiscard
+                } else {
+                        kv.Buttons[kv.b_idx].key.KeyCode  = e.Key.KeyCode
+                        kv.Buttons[kv.b_idx].key.ScanCode = e.Key.ScanCode
+                        kv.Buttons[kv.b_idx].state        = ButtonStatePressed
+                        kv.DrawButton(kv.Buttons[kv.b_idx])
+
+                        kv.b_idx += 1
+                        if kv.b_idx < len (kv.Buttons) {
+                                kv.Buttons[kv.b_idx].state = ButtonStateFocus
+                                kv.DrawButton(kv.Buttons[kv.b_idx])
+                        }
+                        kv.Draw()
+                }
+                return ViewEventDiscard
         }
         return ViewEventPass
-        //return kv.BaseView.ProcessEvent(e)
 }
 
 func (kv *KeyboardView) Draw() {
@@ -162,11 +210,11 @@ func (kv *KeyboardView) Draw() {
 
 func  (kv *KeyboardView) Init(pl ViewPlacement, p *ViewManager)  {
         log.Println("KeyboardView init")
+        kv.BaseView.Init(pl, p)
         kv.Layout = GetKinesisLayout()
         kv.Metrics = kv.Layout.Ruler()
         kv.CreateTexture()
         log.Printf("Buttons %v\n", len(kv.Buttons))
-        kv.BaseView.Init(pl, p)
 }
 
 func (kv *KeyboardView) GetKeyboardRect() (int, int) {
@@ -291,54 +339,44 @@ func (kv *KeyboardView) DrawButton(bt *Button) {
         //Left Top
         idx := y * canvas.SizeX + x
         canvas.Data[idx].Symbol = glyphs.LeftTop
-        canvas.Data[idx].Color = bs.Color
         //Right Top
         idx = y * canvas.SizeX + x + sx - 1
         canvas.Data[idx].Symbol = glyphs.RightTop
-        canvas.Data[idx].Color = bs.Color
         //Left Bottom
         idx = (y + sy - 1) * canvas.SizeX + x
         canvas.Data[idx].Symbol = glyphs.LeftBottom
-        canvas.Data[idx].Color = bs.Color
         //Right Bottom
         idx = (y + sy - 1) * canvas.SizeX + x + sx - 1
         canvas.Data[idx].Symbol = glyphs.RightBottom
-        canvas.Data[idx].Color = bs.Color
 
         //Draw Top Horizontal line
         idx = y * canvas.SizeX + x
         for i := 1; i < sx - 1; i++ {
                 canvas.Data[idx + i].Symbol = glyphs.HorLine
-                canvas.Data[idx + i].Color = bs.Color
         }
         //Draw Bottom Horizontal line
         idx = (y + sy - 1) * canvas.SizeX + x
         for i := 1; i < sx - 1; i++ {
                 canvas.Data[idx + i].Symbol = glyphs.HorLine
-                canvas.Data[idx + i].Color = bs.Color
         }
 
         //Draw Left Vertical line
         idx = y * canvas.SizeX + x
         for i := 1; i < sy - 1; i++ {
                 canvas.Data[idx + i * canvas.SizeX].Symbol = glyphs.VerLine
-                canvas.Data[idx + i * canvas.SizeX].Color = bs.Color
         }
         //Draw Right Vertical line
         idx = y * canvas.SizeX + x + sx - 1
         for i := 1; i < sy - 1; i++ {
                 canvas.Data[idx + i * canvas.SizeX].Symbol = glyphs.VerLine
-                canvas.Data[idx + i * canvas.SizeX].Color = bs.Color
         }
 
         //Draw label
         idx = bt.ly * canvas.SizeX + bt.lx
         for i, c := range bt.key.Name {
                 canvas.Data[idx + i].Symbol = rune(c)
-                canvas.Data[idx + i].Color = bs.Color
         }
 
-        /*
         //Fill the box with color
         idx = y * canvas.SizeX + x
         for i := 0; i < sy; i++ {
@@ -346,7 +384,6 @@ func (kv *KeyboardView) DrawButton(bt *Button) {
                         canvas.Data[idx + i * canvas.SizeX + j].Color = bs.Color
                 }
         }
-        */
 }
         
 func GetButtonStyle(s int) ButtonStyle {
@@ -359,6 +396,8 @@ func GetButtonStyle(s int) ButtonStyle {
                 bs.Color = (wt.LIGHT_BASE_0 << 4) | wt.GRAY_FONT_1
         case ButtonStatePressed:
                 bs.Color = (wt.DARK_BASE_0 << 4) | wt.GRAY_FONT_1
+        case ButtonStateUnresponsive:
+                bs.Color = (wt.ACCENT_RED << 4) | wt.LIGHT_BASE_1
         }
         return bs
 }

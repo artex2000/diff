@@ -3,6 +3,7 @@ package main
 import (
         "fmt"
         "log"
+        "time"
 	"github.com/Microsoft/go-winio"
         wt "github.com/artex2000/diff/winterm"
 )
@@ -34,11 +35,17 @@ func main() {
         view := KeyboardView{} 
         view.PositionType = ViewFullScreen
         root.InsertView(&view)
+        ticker := time.Tick(time.Millisecond * 50)
 
         for root.Running {
                 select {
                 case ev := <-root.Screen.Input:
                         err := root.ProcessEvent(ev)
+                        if err != nil {
+                                root.Running = false
+                        }
+                case <-ticker:
+                        err := root.ProcessTimerEvent()
                         if err != nil {
                                 root.Running = false
                         }

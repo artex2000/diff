@@ -66,3 +66,7 @@ func  (v *BaseView) ProcessEvent(e wt.EventRecord) int {
         return ViewEventPass
 }
 
+func  (v *BaseView) ProcessTimerEvent() int {
+        return ViewEventPass
+}
+

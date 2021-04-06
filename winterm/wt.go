@@ -2,7 +2,6 @@ package winterm
 
 import (
         "unsafe"
-        "time"
 )
 
 const (
@@ -49,7 +48,6 @@ type ScreenBuffer struct {
 }
 
 type EventRecord struct {
-        When        time.Time
         EventType   uint16
         Key         KeyEventRecord
         Mouse       MouseEventRecord
@@ -80,10 +78,12 @@ type Screen struct {
 
         old_h   uintptr
         new_h   uintptr
+        win_h   uintptr
         in      uintptr
         buff    []char_info
         mode    dword
         quit    chan bool
+        max_x, max_y int
 }
 
 //Here is how it's done
@@ -102,7 +102,14 @@ type Screen struct {
 func InitScreen() (*Screen, error) {
         var s Screen
 
-        err := initInput(&s)
+        h, err := winGetConsoleWindow()
+        if err != nil {
+                return nil, err
+        }
+
+        s.win_h = h
+
+        err = initInput(&s)
         if err != nil {
                 return nil, err
         }
@@ -138,6 +145,7 @@ func (s *Screen) Flush() error {
 }
 
 func (s *Screen) Resize(x, y int) error {
+        /*
         //Windows resize event coordinates may be unreliable
         //Get new size from ScreenBufferInfo
         i, err := winGetConsoleScreenBufferInfo(s.new_h)
@@ -147,16 +155,17 @@ func (s *Screen) Resize(x, y int) error {
 
         sx := int(i.window.right - i.window.left + 1)
         sy := int(i.window.bottom - i.window.top + 1)
+        */
 
-        err = winSetConsoleScreenBufferSize(s.new_h, sx, sy)
+        err := winSetConsoleScreenBufferSize(s.new_h, x, y)
         if err != nil {
                 return err
         }
 
-        s.Canvas.SizeX = sx
-        s.Canvas.SizeY = sy
-        s.Canvas.Data  = make([]Cell, sx * sy)
-        s.buff         = make([]char_info, sx * sy)
+        s.Canvas.SizeX = x
+        s.Canvas.SizeY = y
+        s.Canvas.Data  = make([]Cell, x * y)
+        s.buff         = make([]char_info, x * y)
         return nil
 }
 
@@ -229,7 +238,6 @@ func translateEvent(e *input_record) *EventRecord {
         case KeyEvent:
                 k := (*key_event_record)(unsafe.Pointer(&e.event[0]))
 
-                r.When         = time.Now()
                 r.EventType    = KeyEvent
                 r.Key.KeyDown  = k.key_down == 1
                 r.Key.KeyCode  = uint16(k.virtual_key_code)
@@ -239,7 +247,6 @@ func translateEvent(e *input_record) *EventRecord {
         case SizeEvent:
                 s := (*window_resize_record)(unsafe.Pointer(&e.event[0]))
 
-                r.When         = time.Now()
                 r.EventType    = SizeEvent
                 r.Size.SizeX   = int(s.size.x)
                 r.Size.SizeY   = int(s.size.y)

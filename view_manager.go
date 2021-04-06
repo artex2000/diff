@@ -26,6 +26,7 @@ type ViewPlacement struct {
 
 type View interface {
         ProcessEvent(e wt.EventRecord) int
+        ProcessTimerEvent() int
         GetPositionType() int
         SetPosition(p ViewPlacement)
         SetVisible(v bool)
@@ -71,7 +72,7 @@ func (vm *ViewManager) Resize(e wt.EventRecord) error {
 
         err := vm.Screen.Resize(e.Size.SizeX, e.Size.SizeY)
         if err != nil {
-                log.Fatal("Resize failed")
+                log.Fatal(err)
                 return err
         }
 
@@ -101,6 +102,17 @@ func (vm *ViewManager) ProcessEvent(e wt.EventRecord) error {
         }
         f := vm.Focus
         r := f.ProcessEvent(e)
+        switch r {
+        case ViewEventClose:
+                vm.RemoveView(f)
+        }
+
+        return nil
+}
+
+func (vm *ViewManager) ProcessTimerEvent() error {
+        f := vm.Focus
+        r := f.ProcessTimerEvent()
         switch r {
         case ViewEventClose:
                 vm.RemoveView(f)

@@ -118,9 +118,17 @@ var (
 	wait_for_multiple_objects        = kernel32.NewProc("WaitForMultipleObjects")
 	set_event                        = kernel32.NewProc("SetEvent")
 	get_current_console_font         = kernel32.NewProc("GetCurrentConsoleFont")
+	get_largest_console_window_size  = kernel32.NewProc("GetLargestConsoleWindowSize")
+	get_console_window               = kernel32.NewProc("GetConsoleWindow")
 
         get_std_handle                   = kernel32.NewProc("GetStdHandle")
         flush_console_input_buffer       = kernel32.NewProc("FlushConsoleInputBuffer")
+)
+
+var user32 = syscall.NewLazyDLL("user32.dll")
+
+var (
+	show_scroll_bar = user32.NewProc("ShowScrollBar")
 )
 
 const (
@@ -141,6 +149,32 @@ const (
         ENABLE_MOUSE_INPUT    = 0x0010;
         ENABLE_EXTENDED_FLAGS = 0x0080;
 )
+
+func winShowScrollBar(h uintptr, s bool) error {
+        var show uintptr
+
+        if s {
+                show = uintptr(1)
+        } else {
+                show = uintptr(0)
+        }
+
+        r, _, err := show_scroll_bar.Call(h, uintptr(3), show)
+        if r == 0 {
+                return err
+        } else {
+                return nil
+        }
+}
+
+func winGetConsoleWindow() (uintptr, error) {
+        r, _, err := get_console_window.Call()
+        if r == 0 {
+                return 0, err
+        } else {
+                return r, nil
+        }
+}
 
 func winGetStdHandle(h handle) (uintptr, error) {
         r, _, err := get_std_handle.Call(uintptr(h))
@@ -173,6 +207,16 @@ func winCreateConsoleScreenBuffer() (uintptr, error) {
                 uintptr(CONSOLE_TEXT_MODE_BUFFER),
                 uintptr(0))
         return r, err
+}
+
+func winSetConsoleWindowInfo(h uintptr, sx, sy int) error {
+        rect   := &small_rect { 0, 0, short(sx - 1), short(sy - 1) }
+        r, _, err := set_console_window_info.Call(h, uintptr(1), rect.uptr())
+        if r == 0 {
+                return err
+        } else {
+                return nil
+        }
 }
 
 func winSetConsoleActiveScreenBuffer(h uintptr) error {
@@ -213,6 +257,17 @@ func winGetConsoleMode(h uintptr) (dword, error) {
                 return 0, err
         } else {
                 return m, nil
+        }
+}
+
+func winGetLargestConsoleWindowSize(h uintptr) (int, int, error) {
+        r, _, err := get_largest_console_window_size.Call(h)
+        if r == 0 {
+                return 0, 0, err
+        } else {
+                x := int(r & 0xFFFF)
+                y := int((r >> 16) & 0xFFFF)
+                return x, y, nil
         }
 }
 
