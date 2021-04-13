@@ -38,7 +38,6 @@ func  (v *BaseView) Init(pl ViewPlacement, p *ViewManager)  {
 }
 
 func  (v *BaseView) Draw()  {
-        log.Println("Draw view")
         v.Parent.Screen.Canvas.WriteRegion(v.Canvas, v.Position.X, v.Position.Y)
         v.Parent.Dirty = true
 }

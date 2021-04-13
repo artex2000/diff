@@ -132,6 +132,7 @@ func (s *Screen) Close() {
         winFlushConsoleInputBuffer(s.in)
         winSetConsoleActiveScreenBuffer(s.old_h)
         winSetConsoleMode(s.in, s.mode)
+        _ = <-s.Input          //drain channel
         close(s.Input)
 }
 

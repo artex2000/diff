@@ -2,6 +2,8 @@ package main
 
 import (
         //"fmt"
+        "os"
+        "fmt"
         "log"
         wt "github.com/artex2000/diff/winterm"
 )
@@ -20,8 +22,11 @@ const (
 const (
         ButtonStateNone     = iota
         ButtonStateFocus
+        ButtonStateHold
         ButtonStatePressed
+        ButtonStateVerified
         ButtonStateUnresponsive
+        ButtonStateCompound     //button possibly generates several events
 )
 
 const (
@@ -35,6 +40,13 @@ const (
         PadAlignmentRight
 )
 
+const (
+        AppStateNotStarted  = 0x0001
+        AppStateFirstPass   = 0x0002
+        AppStateVerify      = 0x0004
+        AppStateCompleted   = 0x0008
+)
+
 type ButtonStyle struct {
         BorderType  int
         Color       uint32
@@ -46,6 +58,7 @@ type Key struct {
         SizeType  int
         KeyCode   uint16
         ScanCode  uint16
+        KeyId     int
 }
 
 type Button struct {
@@ -89,26 +102,24 @@ type KeyboardView struct {
         Metrics         *KeyboardMetrics
         //we draw all buttons here once and then project relevant part
         //onto view exposed to view manager
-        Texture         wt.ScreenBuffer
-        Buttons         []*Button
         Elapsed         int
         tx, ty          int             //texture origin in View canvas
         b_idx           int
-
-        started         bool
+        AppState        int
+        ButtonDown      bool
+        DumpedCodes     bool
+        KeyMap          map[uint64]int
+        Texture         wt.ScreenBuffer
+        Buttons         []*Button
 }
 
 func (kv *KeyboardView) ProcessTimerEvent() int {
-        if !kv.started {
+        if kv.AppState != AppStateFirstPass || kv.ButtonDown {
                 return ViewEventDiscard
         }
 
         kv.Elapsed += 1
         if kv.Elapsed > 100 {
-                if kv.b_idx >= len (kv.Buttons) {
-                        return ViewEventDiscard
-                }
-
                 kv.Elapsed = 0
                 kv.Buttons[kv.b_idx].state = ButtonStateUnresponsive
                 kv.DrawButton(kv.Buttons[kv.b_idx])
@@ -117,6 +128,8 @@ func (kv *KeyboardView) ProcessTimerEvent() int {
                 if kv.b_idx < len (kv.Buttons) {
                         kv.Buttons[kv.b_idx].state = ButtonStateFocus
                         kv.DrawButton(kv.Buttons[kv.b_idx])
+                } else {
+                        kv.AppState = AppStateCompleted
                 }
                 kv.Draw()
         }
@@ -125,37 +138,99 @@ func (kv *KeyboardView) ProcessTimerEvent() int {
 
 func (kv *KeyboardView) ProcessEvent(e wt.EventRecord) int {
         if e.EventType == wt.KeyEvent && e.Key.KeyDown {
-                if !kv.started {
-                        kv.started = true
+                switch kv.AppState {
+                case AppStateNotStarted:
                         kv.Buttons[kv.b_idx].state = ButtonStateFocus
                         kv.DrawButton(kv.Buttons[kv.b_idx])
                         kv.Draw()
                         return ViewEventDiscard
-                }
-
-                kv.Elapsed = 0                  //reset key-between timer
-                if e.Key.KeyCode == 0x1B {
-                        if (kv.b_idx != 0) && (kv.b_idx != 31) {
-                                return ViewEventClose
-                        }
-                }
-
-                if kv.b_idx >= len (kv.Buttons) {
-                        return ViewEventDiscard
-                } else {
-                        kv.Buttons[kv.b_idx].key.KeyCode  = e.Key.KeyCode
-                        kv.Buttons[kv.b_idx].key.ScanCode = e.Key.ScanCode
-                        kv.Buttons[kv.b_idx].state        = ButtonStatePressed
-                        kv.DrawButton(kv.Buttons[kv.b_idx])
-
-                        kv.b_idx += 1
-                        if kv.b_idx < len (kv.Buttons) {
-                                kv.Buttons[kv.b_idx].state = ButtonStateFocus
+                case AppStateFirstPass:
+                        if kv.ButtonDown {
+                                //new button down event while previous button wasn't released
+                                //so we're leaving current button in Hold state and move on
+                                log.Println("Unexpected key press event")
+                                kv.Buttons[kv.b_idx].state = ButtonStateCompound
                                 kv.DrawButton(kv.Buttons[kv.b_idx])
+                                /*
+                                kv.b_idx += 1
+                                if kv.b_idx < len (kv.Buttons) {
+                                        kv.Buttons[kv.b_idx].state = ButtonStateFocus
+                                        kv.DrawButton(kv.Buttons[kv.b_idx])
+                                } else {
+                                        kv.AppState = AppStateCompleted
+                                }
+                                */
+                        } else {
+                                kv.Elapsed = 0          //reset key-between timer
+                                kv.ButtonDown = true
+
+                                kv.Buttons[kv.b_idx].key.KeyCode  = e.Key.KeyCode
+                                kv.Buttons[kv.b_idx].key.ScanCode = e.Key.ScanCode
+                                kv.Buttons[kv.b_idx].state        = ButtonStateHold
+                                kv.DrawButton(kv.Buttons[kv.b_idx])
+
+                                mk := uint64(e.Key.KeyCode << 16 | e.Key.ScanCode)
+                                kv.KeyMap[mk] = kv.Buttons[kv.b_idx].key.KeyId
                         }
                         kv.Draw()
+                        return ViewEventDiscard
+                case AppStateVerify:
+                        mk := uint64(e.Key.KeyCode << 16 | e.Key.ScanCode)
+                        cmd, ok := kv.KeyMap[mk];
+                        if !ok {
+                                log.Printf("No associated command for %v:%v\n", e.Key.KeyCode, e.Key.ScanCode)
+                                return ViewEventDiscard
+                        } else {
+                                n := GetCommandName(cmd)
+                                log.Printf("Command <%s> (%v:%v)\n", n, e.Key.KeyCode, e.Key.ScanCode)
+                        }
+                        idx := kv.GetButtonIndex(e.Key.KeyCode, e.Key.ScanCode)
+                        if kv.Buttons[idx].state != ButtonStateVerified {
+                                kv.Buttons[idx].state = ButtonStateVerified
+                                kv.DrawButton(kv.Buttons[idx])
+                                kv.Draw()
+                        } else {
+                                kv.AppState = AppStateCompleted
+                        }
+                        return ViewEventDiscard
+                case AppStateCompleted:
+                        mk := uint64(e.Key.KeyCode << 16 | e.Key.ScanCode)
+                        if cmd, ok := kv.KeyMap[mk]; ok {
+                                if cmd == Key_Esc || cmd == Key_Caps {
+                                        return ViewEventClose
+                                } else {
+                                        kv.DumpScanCodes()
+                                }
+                        }
+                        return ViewEventDiscard
                 }
-                return ViewEventDiscard
+        } else if e.EventType == wt.KeyEvent && !e.Key.KeyDown {
+                switch kv.AppState {
+                case AppStateNotStarted:
+                        kv.AppState = AppStateFirstPass
+                        return ViewEventDiscard
+                case AppStateFirstPass:
+                        //check if release came from the same button
+                        if kv.Buttons[kv.b_idx].key.KeyCode  == e.Key.KeyCode &&
+                           kv.Buttons[kv.b_idx].key.ScanCode == e.Key.ScanCode {
+                                kv.Buttons[kv.b_idx].state = ButtonStatePressed
+                                kv.ButtonDown = false
+                                kv.DrawButton(kv.Buttons[kv.b_idx])
+                                kv.b_idx += 1
+                                if kv.b_idx < len (kv.Buttons) {
+                                        kv.Buttons[kv.b_idx].state = ButtonStateFocus
+                                        kv.DrawButton(kv.Buttons[kv.b_idx])
+                                } else {
+                                        kv.AppState = AppStateCompleted
+                                }
+                        } else {
+                                //something strange - release event from different button
+                                //kv.Buttons[kv.b_idx].state = ButtonStateNoRelease
+                                log.Println("Release event doesn't match Press event")
+                        }
+                        kv.Draw()
+                        return ViewEventDiscard
+                }
         }
         return ViewEventPass
 }
@@ -214,6 +289,14 @@ func  (kv *KeyboardView) Init(pl ViewPlacement, p *ViewManager)  {
         kv.Layout = GetKinesisLayout()
         kv.Metrics = kv.Layout.Ruler()
         kv.CreateTexture()
+
+        kv.Elapsed    = 0
+        kv.b_idx      = 0
+        kv.tx, kv.ty  = 0, 0
+        kv.AppState   = AppStateNotStarted
+        kv.ButtonDown = false
+        kv.DumpedCodes = false
+
         log.Printf("Buttons %v\n", len(kv.Buttons))
 }
 
@@ -244,6 +327,7 @@ func (kv *KeyboardView) CreateTexture() {
 
         kc := GetKeyCount(kv.Layout)
         kv.Buttons = make([]*Button, 0, kc)
+        kv.KeyMap  = make(map[uint64]int, kc)
 
         px, py := 0, 0          //pad origin
         for i, p := range kv.Layout.Pads {
@@ -325,7 +409,37 @@ func GetButtonPadRect(p KeyPad, km *KeyboardMetrics) (int, int) {
         return w, h
 }
 
-//func (kv *KeyboardView) DrawButton(bt *Button, surface *wt.ScreenBuffer) {
+func (kv *KeyboardView) GetButtonIndex(key, scan uint16) int {
+        for i, b := range kv.Buttons {
+                if b.key.KeyCode == key && b.key.ScanCode == scan {
+                        return i
+                }
+        }
+        return -1
+}
+
+func (kv *KeyboardView) DumpScanCodes() {
+        if kv.DumpedCodes {
+                return
+        }
+        kv.DumpedCodes = true
+        f, err := os.Create("ScanCodes.txt")
+        if err != nil {
+                log.Fatal("Can't create file for writing")
+        }
+        defer f.Close()
+
+        for i, b := range kv.Buttons {
+                mk := uint64(b.key.KeyCode << 16 | b.key.ScanCode)
+                cmd, ok := kv.KeyMap[mk];
+                cmd_n := "Key_None"
+                if ok {
+                        cmd_n = GetCommandName(cmd)
+                }
+                fmt.Fprintf(f, "%d, %s : %s, %v:%v\n", i, b.key.Name, cmd_n, b.key.KeyCode, b.key.ScanCode) 
+        }
+}
+
 func (kv *KeyboardView) DrawButton(bt *Button) {
         x, y := bt.x, bt.y
         sx, sy := bt.sx, bt.sy
@@ -391,16 +505,22 @@ func GetButtonStyle(s int) ButtonStyle {
         bs.BorderType = ButtonBorderDouble
         switch s {
         case ButtonStateNone:
-                bs.Color = (wt.DARK_BASE_0 << 4) | wt.LIGHT_BASE_0
+                bs.Color = (wt.DARK_BASE_0 << 4) | wt.GRAY_FONT_1
+                bs.BorderType = ButtonBorderThin
         case ButtonStateFocus:
-                bs.Color = (wt.LIGHT_BASE_0 << 4) | wt.GRAY_FONT_1
+                bs.Color = (wt.DARK_BASE_0 << 4) | wt.LIGHT_BASE_1
+                bs.BorderType = ButtonBorderThick
+        case ButtonStateHold:
+                bs.Color = (wt.ACCENT_YELLOW << 4) | wt.GRAY_FONT_1
+                bs.BorderType = ButtonBorderThick
         case ButtonStatePressed:
                 bs.Color = (wt.DARK_BASE_0 << 4) | wt.GRAY_FONT_1
         case ButtonStateUnresponsive:
                 bs.Color = (wt.ACCENT_RED << 4) | wt.LIGHT_BASE_1
+        case ButtonStateCompound:
+                bs.Color = (wt.ACCENT_BLUE << 4) | wt.LIGHT_BASE_1
+        case ButtonStateVerified:
+                bs.Color = (wt.ACCENT_GREEN << 4) | wt.LIGHT_BASE_1
         }
         return bs
 }
-
-
-                
