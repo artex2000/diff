@@ -1,4 +1,9 @@
-package main
+package keyboard_view
+
+import (
+        . "github.com/artex2000/diff/view_manager"
+)
+
 
 func GetKinesisLayout() *KeyboardLayout {
         //Web pad
@@ -64,12 +69,12 @@ func GetKinesisLayout() *KeyboardLayout {
         LeftPad_Row2 := KeyRow {
                 Keys : []Key {
                       { Name : "~", SizeType : ButtonRegular, KeyId : Key_BkTick },
-                      { Name : "!", SizeType : ButtonRegular, KeyId : Key_1 },
-                      { Name : "@", SizeType : ButtonRegular, KeyId : Key_2 },
-                      { Name : "#", SizeType : ButtonRegular, KeyId : Key_3 },
-                      { Name : "$", SizeType : ButtonRegular, KeyId : Key_4 },
-                      { Name : "%", SizeType : ButtonRegular, KeyId : Key_5 },
-                      { Name : "^", SizeType : ButtonRegular, KeyId : Key_6 },
+                      { Name : "1", SizeType : ButtonRegular, KeyId : Key_1 },
+                      { Name : "2", SizeType : ButtonRegular, KeyId : Key_2 },
+                      { Name : "3", SizeType : ButtonRegular, KeyId : Key_3 },
+                      { Name : "4", SizeType : ButtonRegular, KeyId : Key_4 },
+                      { Name : "5", SizeType : ButtonRegular, KeyId : Key_5 },
+                      { Name : "6", SizeType : ButtonRegular, KeyId : Key_6 },
                 },
         }
         LeftPad_Row3 := KeyRow {
@@ -137,12 +142,12 @@ func GetKinesisLayout() *KeyboardLayout {
         }
         RightPad_Row2 := KeyRow {
                 Keys : []Key {
-                      { Name : "&", SizeType : ButtonRegular, KeyId : Key_7 },
-                      { Name : "*", SizeType : ButtonRegular, KeyId : Key_8 },
-                      { Name : "(", SizeType : ButtonRegular, KeyId : Key_9 },
-                      { Name : ")", SizeType : ButtonRegular, KeyId : Key_0 },
+                      { Name : "7", SizeType : ButtonRegular, KeyId : Key_7 },
+                      { Name : "8", SizeType : ButtonRegular, KeyId : Key_8 },
+                      { Name : "9", SizeType : ButtonRegular, KeyId : Key_9 },
+                      { Name : "0", SizeType : ButtonRegular, KeyId : Key_0 },
                       { Name : "-", SizeType : ButtonRegular, KeyId : Key_Minus },
-                      { Name : "+", SizeType : ButtonRegular, KeyId : Key_Equal },
+                      { Name : "=", SizeType : ButtonRegular, KeyId : Key_Equal },
                       { Name : "BkSpace", SizeType : ButtonXLarge, KeyId : Key_BkSpace },
                       { Name : "Home", SizeType : ButtonRegular, KeyId : Key_Home },
                 },

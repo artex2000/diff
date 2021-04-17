@@ -1,4 +1,4 @@
-package main
+package view_manager
 
 const (
         LINE_HORIZONTAL_LIGHT      = 0x2500

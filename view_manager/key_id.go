@@ -1,16 +1,16 @@
-package main
+package view_manager
 
 const (
         Key_None         = iota
+
+        //Action keys
         Key_Esc
         Key_Enter
         Key_Tab 
-        Key_Caps
         Key_Del
         Key_BkSpace
-        Key_Pause
-        Key_PrScr
         
+        //Function keys
         Key_F1
         Key_F2
         Key_F3
@@ -24,6 +24,7 @@ const (
         Key_F11
         Key_F12
 
+        //Number keys
         Key_0
         Key_1
         Key_2
@@ -35,6 +36,7 @@ const (
         Key_8
         Key_9
 
+        //Letter keys
         Key_A
         Key_B
         Key_C
@@ -62,6 +64,7 @@ const (
         Key_Y
         Key_Z
 
+        //Punctuation and math keys
         Key_Space
         Key_BkTick
         Key_Minus
@@ -75,6 +78,7 @@ const (
         Key_Slash
         Key_BkSlash
 
+        //Movement keys
         Key_Home
         Key_End
         Key_PgUp
@@ -84,12 +88,19 @@ const (
         Key_Right
         Key_Down
 
-        Key_Fn
+        //Alteration keys
         Key_Shift 
         Key_Ctrl
-        Key_Win
         Key_Alt
 
+        //Unused action keys
+        Key_Win
+        Key_Fn
+        Key_Caps //Note(artem) special, since caps mapped to esc on my pc
+        Key_Pause
+        Key_PrScr
+
+        //Special keys for Kinesis keyboard
         Key_WebLeft
         Key_WebRight 
         Key_WebHome
@@ -105,11 +116,8 @@ var CommandName = []string {
         "Key_Esc",
         "Key_Enter",
         "Key_Tab",
-        "Key_Caps",
         "Key_Del",
         "Key_BkSpace",
-        "Key_Pause",
-        "Key_PrScr",
         
         "Key_F1",
         "Key_F2",
@@ -184,11 +192,15 @@ var CommandName = []string {
         "Key_Right",
         "Key_Down",
 
-        "Key_Fn",
         "Key_Shift", 
         "Key_Ctrl",
-        "Key_Win",
         "Key_Alt",
+
+        "Key_Caps",
+        "Key_Win",
+        "Key_Fn",
+        "Key_Pause",
+        "Key_PrScr",
 
         "Key_WebLeft",
         "Key_WebRight", 

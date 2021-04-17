@@ -1,11 +1,12 @@
 package main
 
 import (
-        "fmt"
         "log"
         "time"
 	"github.com/Microsoft/go-winio"
         wt "github.com/artex2000/diff/winterm"
+        vm "github.com/artex2000/diff/view_manager"
+        kv "github.com/artex2000/diff/view_manager/keyboard_view"
 )
 
 
@@ -25,15 +26,14 @@ func main() {
         }
         log.Printf("console effective window size %d:%d\n", s.Canvas.SizeX, s.Canvas.SizeY)
 
-        theme := ColorTheme{ DefaultBackground : wt.DARK_BASE_0, DefaultForeground : wt.GRAY_FONT_3 }
-        root := &ViewManager{}
-        root.Theme = theme
+        root := &vm.ViewManager{}
+        root.Theme = vm.ColorTheme{ DefaultBackground : wt.DARK_BASE_0, DefaultForeground : wt.GRAY_FONT_3 }
         root.Running = true
         root.Dirty   = false
         root.Screen  = s
 
-        view := KeyboardView{} 
-        view.PositionType = ViewFullScreen
+        view := kv.KeyboardView{} 
+        view.PositionType = vm.ViewFullScreen
         root.InsertView(&view)
         ticker := time.Tick(time.Millisecond * 50)
 
@@ -74,7 +74,6 @@ func XProcessInput(s *wt.Screen, e wt.EventRecord) {
                 }
         }
 }
-*/
 
 func PrintNumbers(s *wt.Screen) {
         for i := 0; i < s.Canvas.SizeY; i++ {
@@ -95,4 +94,5 @@ func PrintColors(s *wt.Screen) {
                 s.Canvas.WriteLine(line, 0, i + 20 , uint32(i))
         }
 }
+*/
 
