@@ -36,17 +36,6 @@ type WtWindow struct {
         B  short
 }
 
-type Cell struct {
-        Symbol rune
-        Color  uint32
-}
-
-type ScreenBuffer struct {
-        SizeX int
-        SizeY int
-        Data  []Cell    
-}
-
 type EventRecord struct {
         EventType   uint16
         Key         KeyEventRecord
@@ -168,39 +157,6 @@ func (s *Screen) Resize(x, y int) error {
         s.Canvas.Data  = make([]Cell, x * y)
         s.buff         = make([]char_info, x * y)
         return nil
-}
-
-func (s ScreenBuffer) Clear(color uint32) {
-        for i, _ := range s.Data {
-                s.Data[i].Symbol = 0x20
-                s.Data[i].Color = color << 4
-        }
-}
-
-func (s ScreenBuffer) WriteChar(c rune, x, y int, color uint32) {
-        if x >= s.SizeX || y >= s.SizeY {
-                return
-        }
-
-        idx := y * s.SizeX + x
-        s.Data[idx].Symbol = c
-        s.Data[idx].Color = color
-}
-
-func (s ScreenBuffer) WriteLine(st string, x, y int, color uint32) {
-        for _, c := range st {
-                s.WriteChar(c, x, y, color)
-                x += 1
-        }
-}
-
-func (s ScreenBuffer) WriteRegion(t ScreenBuffer, x, y int) {
-        for ty := 0; ty < t.SizeY; ty++ {
-                for tx := 0; tx < t.SizeX; tx++ {
-                        idx := ty * t.SizeX + tx
-                        s.WriteChar(t.Data[idx].Symbol, x + tx, y + ty, t.Data[idx].Color)
-                }
-        }
 }
 
 func pollEvent(s *Screen) {

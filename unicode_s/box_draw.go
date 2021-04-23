@@ -1,4 +1,4 @@
-package view_manager
+package unicode_s
 
 const (
         LINE_HORIZONTAL_LIGHT      = 0x2500

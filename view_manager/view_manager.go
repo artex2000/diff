@@ -12,11 +12,11 @@ const (
 )
 
 const (
-        ViewHidden = iota
-        ViewAny
-        ViewLeftHalf
-        ViewRightHalf
-        ViewFullScreen
+        ViewPositionHidden = iota
+        ViewPositionAny
+        ViewPositionLeftHalf
+        ViewPositionRightHalf
+        ViewPositionFullScreen
 )
 
 type ViewPlacement struct {
@@ -31,7 +31,7 @@ type View interface {
         SetPosition(p ViewPlacement)
         SetVisible(v bool)
         Draw()
-        Init(pl ViewPlacement, pr *ViewManager)
+        Init(pl ViewPlacement, pr *ViewManager, conf interface{})
 }
 
 type ViewManager struct {
@@ -46,12 +46,13 @@ type ViewManager struct {
 type ColorTheme struct {
         DefaultBackground       uint32
         DefaultForeground       uint32
+        Accent                  uint32
 }
 
 func (vm *ViewManager) InsertView(v View) {
         pt := v.GetPositionType()
         pl := vm.GetViewPlacement(pt)
-        v.Init(pl, vm)
+        v.Init(pl, vm, "")
         v.Draw()
         vm.Views = append(vm.Views, v)
         vm.Focus = v
@@ -87,7 +88,7 @@ func (vm *ViewManager) Resize(e wt.EventRecord) error {
 
 func (vm *ViewManager) GetViewPlacement(ptype int) ViewPlacement {
         switch ptype {
-        case ViewFullScreen:
+        case ViewPositionFullScreen:
                 return ViewPlacement{ 0, 0, vm.Screen.Canvas.SizeX, vm.Screen.Canvas.SizeY }
         }
         return ViewPlacement{ 0, 0, 0, 0 }
@@ -120,3 +121,14 @@ func (vm *ViewManager) ProcessTimerEvent() error {
 
         return nil
 }
+
+func (vm *ViewManager) TranslateKeyEvent(key, scan uint16) int {
+        mk := CreateMapKey(key, scan)
+        if cmd, ok := KeyMap[mk]; ok {
+                return cmd
+        } else {
+                return Key_None
+        }
+}
+
+

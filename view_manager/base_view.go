@@ -30,7 +30,7 @@ func  (v *BaseView) GetPositionType() int  {
         return v.PositionType
 }
 
-func  (v *BaseView) Init(pl ViewPlacement, p *ViewManager)  {
+func  (v *BaseView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
         log.Println("BaseView init")
         v.Visible = true
         v.Parent = p

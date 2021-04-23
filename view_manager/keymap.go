@@ -1,5 +1,13 @@
 package view_manager
 
+func CreateMapKey(key, scan uint16) uint64 {
+        var r uint64
+        r = uint64(key)
+        r = r << 16
+        r += uint64(scan)
+        return r
+}
+
 var KeyMap = map[uint64]int {
 0x001b0001 : Key_Esc,
 0x000d001c : Key_Enter,

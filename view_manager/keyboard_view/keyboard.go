@@ -6,6 +6,7 @@ import (
         "fmt"
         "log"
         wt "github.com/artex2000/diff/winterm"
+        uc "github.com/artex2000/diff/unicode_s"
         . "github.com/artex2000/diff/view_manager"
 )
 
@@ -416,7 +417,7 @@ func (kv *KeyboardView) DrawButton(bt *Button) {
         bs := GetButtonStyle(bt.state)
         canvas := kv.Texture
         //canvas := surface
-        glyphs := GetDrawBoxGlyphs(bs.BorderType)
+        glyphs := uc.GetDrawBoxGlyphs(bs.BorderType)
         
         //Set corners
         //Left Top
@@ -471,17 +472,17 @@ func (kv *KeyboardView) DrawButton(bt *Button) {
         
 func GetButtonStyle(s int) ButtonStyle {
         bs := ButtonStyle{}
-        bs.BorderType = ButtonBorderDouble
+        bs.BorderType = uc.ButtonBorderDouble
         switch s {
         case ButtonStateNone:
                 bs.Color = (wt.DARK_BASE_0 << 4) | wt.GRAY_FONT_1
-                bs.BorderType = ButtonBorderThin
+                bs.BorderType = uc.ButtonBorderThin
         case ButtonStateFocus:
                 bs.Color = (wt.DARK_BASE_0 << 4) | wt.LIGHT_BASE_1
-                bs.BorderType = ButtonBorderThick
+                bs.BorderType = uc.ButtonBorderThick
         case ButtonStateHold:
                 bs.Color = (wt.ACCENT_YELLOW << 4) | wt.GRAY_FONT_1
-                bs.BorderType = ButtonBorderThick
+                bs.BorderType = uc.ButtonBorderThick
         case ButtonStatePressed:
                 bs.Color = (wt.DARK_BASE_0 << 4) | wt.GRAY_FONT_1
         case ButtonStateUnresponsive:

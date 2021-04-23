@@ -6,7 +6,7 @@ import (
 	"github.com/Microsoft/go-winio"
         wt "github.com/artex2000/diff/winterm"
         vm "github.com/artex2000/diff/view_manager"
-        kv "github.com/artex2000/diff/view_manager/keyboard_view"
+        fv "github.com/artex2000/diff/view_manager/file_view"
 )
 
 
@@ -27,13 +27,17 @@ func main() {
         log.Printf("console effective window size %d:%d\n", s.Canvas.SizeX, s.Canvas.SizeY)
 
         root := &vm.ViewManager{}
-        root.Theme = vm.ColorTheme{ DefaultBackground : wt.DARK_BASE_0, DefaultForeground : wt.GRAY_FONT_3 }
+        root.Theme = vm.ColorTheme{ 
+                                DefaultBackground : wt.DARK_BASE_0, 
+                                DefaultForeground : wt.GRAY_FONT_3,
+                                Accent            : wt.ACCENT_BLUE,
+                        }
         root.Running = true
         root.Dirty   = false
         root.Screen  = s
 
-        view := kv.KeyboardView{} 
-        view.PositionType = vm.ViewFullScreen
+        view := fv.FileView{} 
+        view.PositionType = vm.ViewPositionFullScreen
         root.InsertView(&view)
         ticker := time.Tick(time.Millisecond * 50)
 
