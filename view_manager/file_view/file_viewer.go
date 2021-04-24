@@ -131,8 +131,7 @@ func (fv *FileView) DrawSeparators(cm []ColumnMetrics) {
 }
 
 func (fv *FileView) DrawFocusSlot(cm []ColumnMetrics) {
-        //cl := fv.Parent.GetFocusColor()
-        cl := (wt.LIGHT_BASE_0 << 4) | wt.GRAY_FONT_0
+        cl := fv.Parent.GetFocusColor()
         idx := fv.FocusY * fv.Canvas.SizeX + cm[fv.FocusX].Offset
         for i := 0; i < cm[fv.FocusX].Width; i += 1 {
                 fv.Canvas.Data[idx].Color = cl

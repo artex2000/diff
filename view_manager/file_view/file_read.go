@@ -54,8 +54,13 @@ func ReadFolder(path string, hidden bool) (*FolderEntry, error) {
         }
 
         //Check Top-Level directory to add parent directory marker if needed <..>
-        l1, _ := filepath.Split(path)
-        if l1 != "" {
+        top := false
+        if runtime.GOOS == "windows" && strings.HasSuffix(path, ":\\") {
+                top = true
+        } else if path == "/" {
+                top = true
+        }
+        if !top {
                 e := FileEntry{ Name : "..", Dir : true, State : FileEntryNormal }
                 r.Entries = append(r.Entries, &e)
         }
