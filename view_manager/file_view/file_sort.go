@@ -30,13 +30,10 @@ func (e EntryByName) Less(i, j int) bool {
 }
 
 
-func (fv *FileView) SortEntries(list []*FileEntry) {
-        if fv.HideDotFiles {
-                //TODO
-        }
+func (fv *FileView) SortEntries() {
         switch fv.SortType {
         case FileSortName:
-                sort.Sort(EntryByName(list))
+                sort.Sort(EntryByName(fv.Files))
         }
 }
 

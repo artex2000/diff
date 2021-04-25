@@ -17,54 +17,48 @@ type FileEntry struct {
         State   int
 }
 
-type FolderEntry struct {
-        FullPath        string
-        Entries         []*FileEntry
-}
-
-func ReadFolder(path string, hidden bool) (*FolderEntry, error) {
-        r := FolderEntry{ FullPath : path }
-        f, err := os.Open(path)
+func (fv *FileView) GetFiles() error {
+        f, err := os.Open(fv.CurrentPath)
         if err != nil {
                 log.Println(err)
-                return nil, err
+                return err
         }
         defer f.Close()
 
         files, err := f.Readdir(-1)
         if err != nil {
                 log.Println(err)
-                return nil, err
+                return err
         }
 
-        r.Entries = make([]*FileEntry, 0, len(files) + 1)       //extra entry for parent subdirectory
+        fv.Files = make([]*FileEntry, 0, len(files) + 1)       //extra entry for parent subdirectory
         for _, file := range files {
                 s := file.Name()
-                if !hidden && (strings.HasPrefix(s, "$") || strings.HasPrefix(s, ".")) {
+                if fv.HideDotFiles && (strings.HasPrefix(s, "$") || strings.HasPrefix(s, ".")) {
                         continue
                 }
                 e := FileEntry{}
 
-                e.Name    = file.Name()
+                e.Name    = s
                 e.ModTime = file.ModTime()
                 e.Dir     = file.IsDir()
                 e.State   = FileEntryNormal
 
-                r.Entries = append(r.Entries, &e)
+                fv.Files = append(fv.Files, &e)
         }
 
         //Check Top-Level directory to add parent directory marker if needed <..>
         top := false
-        if runtime.GOOS == "windows" && strings.HasSuffix(path, ":\\") {
+        if runtime.GOOS == "windows" && strings.HasSuffix(fv.CurrentPath, ":\\") {
                 top = true
-        } else if path == "/" {
+        } else if fv.CurrentPath == "/" {
                 top = true
         }
         if !top {
                 e := FileEntry{ Name : "..", Dir : true, State : FileEntryNormal }
-                r.Entries = append(r.Entries, &e)
+                fv.Files = append(fv.Files, &e)
         }
-        return &r, nil
+        return nil
 }
 
 func GetRootDirectory(name string) string {
