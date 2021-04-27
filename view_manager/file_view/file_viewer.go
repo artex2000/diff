@@ -82,7 +82,7 @@ func (fv *FileView) ProcessEvent(e wt.EventRecord) int {
 
 //Use this to redraw whole view
 func (fv *FileView) Draw() {
-        fv.Canvas.Clear(fv.Parent.Theme.DefaultBackground)
+        fv.Canvas.Clear(fv.Parent.Theme.DarkestBackground)
         cm := fv.GetColumnMetrics()
         fv.DrawSeparators(cm)
         fv.DrawFileList(cm)
@@ -146,7 +146,7 @@ func (fv *FileView) GetColumnMetrics() []ColumnMetrics {
 
 func (fv *FileView) DrawSeparators(cm []ColumnMetrics) {
         x := 0
-        color := fv.Parent.GetDefaultColor()
+        color := fv.Parent.GetTextColor()
         for _, w := range cm {
                 x += w.Width
                 if x < fv.Canvas.SizeX {
@@ -158,14 +158,14 @@ func (fv *FileView) DrawSeparators(cm []ColumnMetrics) {
 
 func (fv *FileView) DrawFocusSlot(OldX, OldY int, cm []ColumnMetrics, set bool) {
         x, y := fv.FocusX, fv.FocusY
-        cl   := fv.Parent.GetFocusColor()
+        cl   := fv.Parent.GetSelectTextColor()
         if !set {
                 x, y = OldX, OldY
                 idx := fv.GetIndexFromSlot(x, y)
                 if fv.Files[idx].Dir {
-                        cl = fv.Parent.GetAccentColor()
+                        cl = fv.Parent.GetAccentBlueColor()
                 } else {
-                        cl = fv.Parent.GetDefaultColor()
+                        cl = fv.Parent.GetTextColor()
                 }
         }
         idx := y * fv.Canvas.SizeX + cm[x].Offset
@@ -186,8 +186,8 @@ func (fv *FileView) DrawFileList(cm []ColumnMetrics) {
                 fv.FolderChange = false
         }
 
-        fileColor  := fv.Parent.GetDefaultColor()
-        dirColor   := fv.Parent.GetAccentColor()
+        fileColor  := fv.Parent.GetTextColor()
+        dirColor   := fv.Parent.GetAccentBlueColor()
         for i := fv.BaseIndex; i < len (fv.Files); i += 1 {
                 x, y := fv.GetSlotFromIndex(i)
                 if x == -1 && y == -1 {         //we've filled all slots

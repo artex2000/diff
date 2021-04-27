@@ -44,9 +44,22 @@ type ViewManager struct {
 }
 
 type ColorTheme struct {
-        DefaultBackground       uint32
-        DefaultForeground       uint32
-        Accent                  uint32
+        DarkestBackground       uint32
+        DarkBackground          uint32
+        DarkestForeground       uint32
+        DarkForeground          uint32
+        LightForeground         uint32
+        LightestForeground      uint32
+        LightBackground         uint32
+        LightestBackground      uint32
+        AccentRed               uint32
+        AccentGreen             uint32
+        AccentYellow            uint32
+        AccentBlue              uint32
+        AccentMagenta           uint32
+        AccentCyan              uint32
+        AccentOrange            uint32
+        AccentViolet            uint32
 }
 
 func (vm *ViewManager) InsertView(v View) {
@@ -62,6 +75,31 @@ func (vm *ViewManager) InsertView(v View) {
 func (vm *ViewManager) RemoveView(v View) {
         if len(vm.Views) == 1 {
                 vm.Running = false
+        }
+}
+
+func (vm *ViewManager) SetColorTheme(theme *ColorTheme) {
+        if theme == nil {
+                vm.Theme = ColorTheme{
+                        DarkestBackground   : wt.DARK_BASE_0, 
+                        DarkBackground      : wt.DARK_BASE_1, 
+                        DarkestForeground   : wt.GRAY_FONT_0, 
+                        DarkForeground      : wt.GRAY_FONT_1, 
+                        LightForeground     : wt.GRAY_FONT_2,
+                        LightestForeground  : wt.GRAY_FONT_3,
+                        LightBackground     : wt.LIGHT_BASE_0, 
+                        LightestBackground  : wt.LIGHT_BASE_1,
+                        AccentRed           : wt.ACCENT_RED, 
+                        AccentGreen         : wt.ACCENT_GREEN,    
+                        AccentYellow        : wt.ACCENT_YELLOW,
+                        AccentBlue          : wt.ACCENT_BLUE,
+                        AccentMagenta       : wt.ACCENT_MAGENTA,
+                        AccentCyan          : wt.ACCENT_CYAN,
+                        AccentOrange        : wt.ACCENT_ORANGE,
+                        AccentViolet        : wt.ACCENT_VIOLET,
+                }
+        } else {
+                vm.Theme = *theme
         }
 }
 

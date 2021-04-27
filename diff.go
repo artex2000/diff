@@ -27,11 +27,7 @@ func main() {
         log.Printf("console effective window size %d:%d\n", s.Canvas.SizeX, s.Canvas.SizeY)
 
         root := &vm.ViewManager{}
-        root.Theme = vm.ColorTheme{ 
-                                DefaultBackground : wt.DARK_BASE_0, 
-                                DefaultForeground : wt.GRAY_FONT_3,
-                                Accent            : wt.ACCENT_BLUE,
-                        }
+        root.SetColorTheme(nil)
         root.Running = true
         root.Dirty   = false
         root.Screen  = s

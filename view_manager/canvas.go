@@ -5,16 +5,24 @@ import (
 //        wt "github.com/artex2000/diff/winterm"
 )
 
-func (vm *ViewManager) GetDefaultColor() uint32 {
-        return (vm.Theme.DefaultBackground << 4) | vm.Theme.DefaultForeground
+func (vm *ViewManager) GetTextColor() uint32 {
+        return (vm.Theme.DarkestBackground << 4) | vm.Theme.DarkForeground
 }
 
-func (vm *ViewManager) GetFocusColor() uint32 {
-        return (vm.Theme.DefaultForeground << 4) | vm.Theme.DefaultBackground
+func (vm *ViewManager) GetShadowTextColor() uint32 {
+        return (vm.Theme.DarkestBackground << 4) | vm.Theme.DarkestForeground
 }
 
-func (vm *ViewManager) GetAccentColor() uint32 {
-        return (vm.Theme.DefaultBackground << 4) | vm.Theme.Accent
+func (vm *ViewManager) GetSelectTextColor() uint32 {
+        return (vm.Theme.DarkForeground << 4) | vm.Theme.DarkestBackground
+}
+
+func (vm *ViewManager) GetAccentBlueColor() uint32 {
+        return (vm.Theme.DarkestBackground << 4) | vm.Theme.AccentBlue
+}
+
+func (vm *ViewManager) GetAccentRedColor() uint32 {
+        return (vm.Theme.DarkestBackground << 4) | vm.Theme.AccentRed
 }
 
 

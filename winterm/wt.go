@@ -10,8 +10,8 @@ const (
         DARK_BASE_1    uint32 = 0x0000
         GRAY_FONT_0    uint32 = 0x000A
         GRAY_FONT_1    uint32 = 0x000B
-        GRAY_FONT_3    uint32 = 0x000C
-        GRAY_FONT_4    uint32 = 0x000E
+        GRAY_FONT_2    uint32 = 0x000C
+        GRAY_FONT_3    uint32 = 0x000E
         LIGHT_BASE_0   uint32 = 0x0007
         LIGHT_BASE_1   uint32 = 0x000F
 
