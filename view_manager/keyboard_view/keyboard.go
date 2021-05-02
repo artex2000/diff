@@ -400,11 +400,11 @@ func (kv *KeyboardView) DumpScanCodes() {
                 }
                 mk := CreateMapKey(b.key.KeyCode, b.key.ScanCode)
                 cmd, ok := kv.KeyMap[mk];
-                cmd_n := "Key_None"
+                key_id := "Key_None"
                 if ok {
-                        cmd_n = GetCommandName(cmd)
+                        key_id = GetKeyIdName(cmd)
                 }
-                fmt.Fprintf(f, "0x%08x : %s,\n", mk, cmd_n) 
+                fmt.Fprintf(f, "0x%08x : %s,\n", mk, key_id) 
         }
         fmt.Fprintln(f, "}")
         log.Println("Done dumping scan codes")

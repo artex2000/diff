@@ -34,15 +34,20 @@ func (fv *FileView) GetFiles() error {
         fv.Files = make([]*FileEntry, 0, len(files) + 1)       //extra entry for parent subdirectory
         for _, file := range files {
                 s := file.Name()
-                if fv.HideDotFiles && (strings.HasPrefix(s, "$") || strings.HasPrefix(s, ".")) {
-                        continue
+                st := FileEntryNormal
+                if (strings.HasPrefix(s, "$") || strings.HasPrefix(s, ".")) {
+                        if fv.HideDotFiles {
+                                continue
+                        } else {
+                                st = FileEntryHidden
+                        }
                 }
                 e := FileEntry{}
 
                 e.Name    = s
                 e.ModTime = file.ModTime()
                 e.Dir     = file.IsDir()
-                e.State   = FileEntryNormal
+                e.State   = st
 
                 fv.Files = append(fv.Files, &e)
         }

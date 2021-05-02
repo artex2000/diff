@@ -10,12 +10,21 @@ const (
         FileEntryNormal         = iota
         FileEntryFocus
         FileEntryMarked
+        FileEntryHidden
+        FileEntryNotAccessible
 )
 
 const (
         FileSortName    = iota
         FileSortDate
         FileSortType
+)
+
+const (
+        AppStateNavigate    = iota
+        AppStateSearch
+        AppStateSelect
+        AppStateInsert
 )
 
 type ColumnMetrics struct {
@@ -32,6 +41,7 @@ type SlotPosition struct {
 type FileView struct {
         BaseView
         Columns         int
+        Rows            int
         FocusX          int
         FocusY          int
         BaseIndex       int             //File index of top-left slot
@@ -39,42 +49,87 @@ type FileView struct {
         HideDotFiles    bool
         FolderChange    bool            //Set if switch to new folder
         CurrentPath     string
+        AppKeyState     *KeyState
+        AppState        int
         Files           []*FileEntry
         LastPosition    []SlotPosition
 }
 
 func (fv *FileView) ProcessTimerEvent() int {
+        if fv.AppKeyState.CountDown {
+                fv.AppKeyState.Elapsed += 1
+        }
         return ViewEventDiscard
 }
 
 func (fv *FileView) ProcessEvent(e wt.EventRecord) int {
         if e.EventType == wt.KeyEvent && e.Key.KeyDown {
-                cmd := fv.Parent.TranslateKeyEvent(e.Key.KeyCode, e.Key.ScanCode)
-//                cmd    := fv.GetCommand(key_id)
+                key_id := fv.Parent.TranslateKeyEvent(e.Key.KeyCode, e.Key.ScanCode)
+                if key_id >= Key_Shift && key_id <= Key_Alt {
+                        fv.AppKeyState.Modifiers |= (1 << (key_id - Key_Shift));
+                        return ViewEventDiscard
+                }
+
+                if fv.AppKeyState.CountDown {
+                        fv.AppKeyState.CountDown = false
+                }
+
+                cmd := fv.GetCommandId(key_id)
+                log.Printf("Received: %v\n", GetCommandName(cmd))
                 switch cmd {
-                case Key_Esc:
+                case CmdQuit:
                         return ViewEventClose
-                case Key_Minus:
+                case CmdChord1, CmdChord2:
+                        return ViewEventDiscard
+                case CmdDecrementColumns:
                         fv.DecrementColumns()
-                case Key_Equal:
+                case CmdIncrementColumns:
                         fv.IncrementColumns()
-                case Key_J:
-                        fv.MoveDown()
-                case Key_K:
+                case CmdMoveUp:
                         fv.MoveUp()
-                case Key_H:
+                case CmdMoveDown:
+                        fv.MoveDown()
+                case CmdMoveCurrentColumnTop:
+                        fv.MoveColumnTop()
+                case CmdMoveCurrentColumnBottom:
+                        fv.MoveColumnBottom()
+                case CmdMoveTop:
+                        fv.MoveTop()
+                case CmdMoveBottom:
+                        fv.MoveBottom()
+                case CmdMoveLeft:
                         fv.MoveLeft()
-                case Key_L:
+                case CmdMoveRight:
                         fv.MoveRight()
-                case Key_Enter:
+                case CmdEnterDirectory:
                         idx := fv.GetIndexFromSlot(fv.FocusX, fv.FocusY)
-                        if fv.Files[idx].Dir {
-                                fv.MoveIntoDir()
+                        if fv.Files[idx].State != FileEntryHidden && fv.Files[idx].State != FileEntryNotAccessible {
+                                if fv.Files[idx].Dir {
+                                        fv.MoveIntoDir()
+                                }
                         }
                 }
                 return ViewEventDiscard
         } else if e.EventType == wt.KeyEvent && !e.Key.KeyDown {
-        //        cmd := fv.Parent.TranslateKeyEvent(e.Key.KeyCode, e.Key.ScanCode)
+                key_id := fv.Parent.TranslateKeyEvent(e.Key.KeyCode, e.Key.ScanCode)
+                if key_id >= Key_Shift && key_id <= Key_Alt {
+                        fv.AppKeyState.Modifiers &= ^(1 << (key_id - Key_Shift));
+                        return ViewEventDiscard
+                }
+
+                switch fv.AppKeyState.ChordState {
+                        //AppKeyState.KeyX are combined keys (key_id | modifier << 16)
+                        //We don't want to check modifier here, so clear upper 16 bits
+                        //so we can avoid situations where modifier is released first
+                case ChordStateFirst:
+                        if key_id == (fv.AppKeyState.Key1 & 0xFFFF) {
+                                fv.AppKeyState.CountDown = true
+                        }
+                case ChordStateSecond:
+                        if key_id == (fv.AppKeyState.Key2 & 0xFFFF) {
+                                fv.AppKeyState.CountDown = true
+                        }
+                }
                 return ViewEventDiscard
         }
         return ViewEventPass
@@ -107,13 +162,19 @@ func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
         }
         fv.CurrentPath = GetRootDirectory(root)
         fv.Columns       = 3
+        fv.Rows          = fv.Canvas.SizeY
         fv.FocusX        = 0
         fv.FocusY        = 0
         fv.BaseIndex     = 0
-        fv.HideDotFiles  = true
+        fv.AppState      = 0
+        fv.HideDotFiles  = false
         fv.FolderChange  = true
         fv.SortType      = FileSortName
+
+        fv.AppKeyState   = &KeyState{}
+        fv.AppKeyState.Init()
 }
+
 
 func (fv *FileView) GetColumnMetrics() []ColumnMetrics {
         r := make([]ColumnMetrics, fv.Columns)
@@ -162,11 +223,7 @@ func (fv *FileView) DrawFocusSlot(OldX, OldY int, cm []ColumnMetrics, set bool) 
         if !set {
                 x, y = OldX, OldY
                 idx := fv.GetIndexFromSlot(x, y)
-                if fv.Files[idx].Dir {
-                        cl = fv.Parent.GetAccentBlueColor()
-                } else {
-                        cl = fv.Parent.GetTextColor()
-                }
+                cl = fv.GetFileEntryColor(fv.Files[idx])
         }
         idx := y * fv.Canvas.SizeX + cm[x].Offset
         for i := 0; i < cm[x].Width; i += 1 {
@@ -186,19 +243,13 @@ func (fv *FileView) DrawFileList(cm []ColumnMetrics) {
                 fv.FolderChange = false
         }
 
-        fileColor  := fv.Parent.GetTextColor()
-        dirColor   := fv.Parent.GetAccentBlueColor()
         for i := fv.BaseIndex; i < len (fv.Files); i += 1 {
                 x, y := fv.GetSlotFromIndex(i)
                 if x == -1 && y == -1 {         //we've filled all slots
                         break
                 }
 
-                cl := fileColor
-                if fv.Files[i].Dir {
-                        cl = dirColor
-                }
-
+                cl := fv.GetFileEntryColor(fv.Files[i])
                 idx := y * fv.Canvas.SizeX + cm[x].Offset
                 for j, s := range fv.Files[i].Name {
                         if j == cm[x].Width {    //File name is longer than column width
@@ -213,8 +264,8 @@ func (fv *FileView) DrawFileList(cm []ColumnMetrics) {
 
 func (fv *FileView) GetSlotFromIndex(idx int) (int, int) {
         rel := idx - fv.BaseIndex
-        col := rel / fv.Canvas.SizeY
-        row := rel % fv.Canvas.SizeY
+        col := rel / fv.Rows
+        row := rel % fv.Rows
         if col >= fv.Columns {
                 return -1, -1
         } else {
@@ -223,12 +274,32 @@ func (fv *FileView) GetSlotFromIndex(idx int) (int, int) {
 }
 
 func (fv *FileView) GetIndexFromSlot(x, y int) int {
-        idx := x * fv.Canvas.SizeY + y + fv.BaseIndex
+        idx := x * fv.Rows + y + fv.BaseIndex
         return idx
 }
 
 func (fv *FileView) IsInRange(x, y, base int) bool {
-        idx := x * fv.Canvas.SizeY + y + base
+        idx := x * fv.Rows + y + base
         return idx < len (fv.Files)
 }
 
+func (fv *FileView) GetFileEntryColor(e *FileEntry) uint32 {
+        var c uint32
+
+        switch e.State {
+        case FileEntryNormal:
+                if e.Dir {
+                        c = fv.Parent.GetAccentBlueColor()
+                } else {
+                        c = fv.Parent.GetTextColor()
+                }
+        case FileEntryMarked:
+                        c = fv.Parent.GetAccentYellowColor()
+        case FileEntryHidden:
+                        c = fv.Parent.GetShadowTextColor()
+        case FileEntryNotAccessible:
+                        c = fv.Parent.GetAccentRedColor()
+        }
+
+        return c
+}

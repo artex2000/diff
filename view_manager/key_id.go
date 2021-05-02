@@ -8,7 +8,7 @@ const (
         Key_Enter
         Key_Tab 
         Key_Del
-        Key_BkSpace
+        Key_BackSpace
         
         //Function keys
         Key_F1
@@ -66,17 +66,17 @@ const (
 
         //Punctuation and math keys
         Key_Space
-        Key_BkTick
+        Key_BackTick
         Key_Minus
         Key_Equal
-        Key_LBrkt
-        Key_RBrkt
-        Key_SColon
-        Key_SQuote
+        Key_LeftBraket
+        Key_RightBraket
+        Key_SemiColon
+        Key_SingleQuote
         Key_Comma
         Key_Dot
         Key_Slash
-        Key_BkSlash
+        Key_BackSlash
 
         //Movement keys
         Key_Home
@@ -117,7 +117,7 @@ var CommandName = []string {
         "Key_Enter",
         "Key_Tab",
         "Key_Del",
-        "Key_BkSpace",
+        "Key_BackSpace",
         
         "Key_F1",
         "Key_F2",
@@ -171,17 +171,17 @@ var CommandName = []string {
         "Key_Z",
 
         "Key_Space",
-        "Key_BkTick",
+        "Key_BackTick",
         "Key_Minus",
         "Key_Equal",
-        "Key_LBrkt",
-        "Key_RBrkt",
-        "Key_SColon",
-        "Key_SQuote",
+        "Key_LeftBraket",
+        "Key_RightBraket",
+        "Key_SemiColon",
+        "Key_SingleQuote",
         "Key_Comma",
         "Key_Dot",
         "Key_Slash",
-        "Key_BkSlash",
+        "Key_BackSlash",
 
         "Key_Home",
         "Key_End",
@@ -212,7 +212,7 @@ var CommandName = []string {
         "Key_Menu",
 }
 
-func GetCommandName(cmd int) string {
+func GetKeyIdName(cmd int) string {
         return CommandName[cmd]
 }
 

@@ -10,7 +10,7 @@ func (vm *ViewManager) GetTextColor() uint32 {
 }
 
 func (vm *ViewManager) GetShadowTextColor() uint32 {
-        return (vm.Theme.DarkestBackground << 4) | vm.Theme.DarkestForeground
+        return (vm.Theme.DarkestBackground << 4) | vm.Theme.DarkBackground
 }
 
 func (vm *ViewManager) GetSelectTextColor() uint32 {
@@ -23,6 +23,10 @@ func (vm *ViewManager) GetAccentBlueColor() uint32 {
 
 func (vm *ViewManager) GetAccentRedColor() uint32 {
         return (vm.Theme.DarkestBackground << 4) | vm.Theme.AccentRed
+}
+
+func (vm *ViewManager) GetAccentYellowColor() uint32 {
+        return (vm.Theme.DarkestBackground << 4) | vm.Theme.AccentYellow
 }
 
 

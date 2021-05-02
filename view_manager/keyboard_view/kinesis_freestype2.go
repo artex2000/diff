@@ -68,7 +68,7 @@ func GetKinesisLayout() *KeyboardLayout {
         }
         LeftPad_Row2 := KeyRow {
                 Keys : []Key {
-                      { Name : "~", SizeType : ButtonRegular, KeyId : Key_BkTick },
+                      { Name : "~", SizeType : ButtonRegular, KeyId : Key_BackTick },
                       { Name : "1", SizeType : ButtonRegular, KeyId : Key_1 },
                       { Name : "2", SizeType : ButtonRegular, KeyId : Key_2 },
                       { Name : "3", SizeType : ButtonRegular, KeyId : Key_3 },
@@ -148,7 +148,7 @@ func GetKinesisLayout() *KeyboardLayout {
                       { Name : "0", SizeType : ButtonRegular, KeyId : Key_0 },
                       { Name : "-", SizeType : ButtonRegular, KeyId : Key_Minus },
                       { Name : "=", SizeType : ButtonRegular, KeyId : Key_Equal },
-                      { Name : "BkSpace", SizeType : ButtonXLarge, KeyId : Key_BkSpace },
+                      { Name : "BkSpace", SizeType : ButtonXLarge, KeyId : Key_BackSpace },
                       { Name : "Home", SizeType : ButtonRegular, KeyId : Key_Home },
                 },
         }
@@ -159,9 +159,9 @@ func GetKinesisLayout() *KeyboardLayout {
                       { Name : "I", SizeType : ButtonRegular, KeyId : Key_I },
                       { Name : "O", SizeType : ButtonRegular, KeyId : Key_O },
                       { Name : "P", SizeType : ButtonRegular, KeyId : Key_P },
-                      { Name : "{", SizeType : ButtonRegular, KeyId : Key_LBrkt },
-                      { Name : "}", SizeType : ButtonRegular, KeyId : Key_RBrkt },
-                      { Name : "|", SizeType : ButtonLarge, KeyId : Key_BkSlash },
+                      { Name : "{", SizeType : ButtonRegular, KeyId : Key_LeftBraket },
+                      { Name : "}", SizeType : ButtonRegular, KeyId : Key_RightBraket },
+                      { Name : "|", SizeType : ButtonLarge, KeyId : Key_BackSlash },
                       { Name : "End", SizeType : ButtonRegular, KeyId : Key_End },
                 },
         }
@@ -171,8 +171,8 @@ func GetKinesisLayout() *KeyboardLayout {
                       { Name : "J", SizeType : ButtonRegular, KeyId : Key_J },
                       { Name : "K", SizeType : ButtonRegular, KeyId : Key_K },
                       { Name : "L", SizeType : ButtonRegular, KeyId : Key_L },
-                      { Name : ";", SizeType : ButtonRegular, KeyId : Key_SColon },
-                      { Name : "'", SizeType : ButtonRegular, KeyId : Key_SQuote },
+                      { Name : ";", SizeType : ButtonRegular, KeyId : Key_SemiColon },
+                      { Name : "'", SizeType : ButtonRegular, KeyId : Key_SingleQuote },
                       { Name : "Enter", SizeType : ButtonXLarge, KeyId : Key_Enter },
                       { Name : "PgUp", SizeType : ButtonRegular, KeyId : Key_PgUp },
                 },
