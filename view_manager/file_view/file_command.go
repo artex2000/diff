@@ -13,7 +13,7 @@ func (fv *FileView) DecrementColumns() {
 }
 
 func (fv *FileView) IncrementColumns() {
-        if fv.Columns < 4 {
+        if fv.Columns < 5 {
                 fv.Columns += 1
                 fv.Draw()
         }

@@ -176,6 +176,7 @@ func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
 }
 
 
+/*
 func (fv *FileView) GetColumnMetrics() []ColumnMetrics {
         r := make([]ColumnMetrics, fv.Columns)
         w := fv.Canvas.SizeX - (fv.Columns - 1)             //reserve space for column separators
@@ -201,6 +202,22 @@ func (fv *FileView) GetColumnMetrics() []ColumnMetrics {
                 r[2].Width = r[0].Width
                 r[3].Offset = r[0].Width + 1 + r[1].Width + 1 + r[2].Width + 1
                 r[3].Width = r[1].Width
+        }
+        return r
+}
+*/
+
+func (fv *FileView) GetColumnMetrics() []ColumnMetrics {
+        r := make([]ColumnMetrics, 0, fv.Columns)
+        w := fv.Canvas.SizeX - (fv.Columns - 1)             //reserve space for column separators
+        offset := 0
+        cols := fv.Columns
+        for cols > 0 {
+                cm := ColumnMetrics{ Offset : offset, Width : w / cols }
+                r = append(r, cm)
+                offset += cm.Width + 1
+                w -= cm.Width
+                cols -= 1
         }
         return r
 }
@@ -251,10 +268,16 @@ func (fv *FileView) DrawFileList(cm []ColumnMetrics) {
 
                 cl := fv.GetFileEntryColor(fv.Files[i])
                 idx := y * fv.Canvas.SizeX + cm[x].Offset
-                for j, s := range fv.Files[i].Name {
-                        if j == cm[x].Width {    //File name is longer than column width
-                                break
-                        }
+                //Here we handle situation where file name is longer than column width
+                name := fv.Files[i].Name
+                if len (name) > cm[x].Width {
+                        //cut filename from the end and insert ">" character
+                        //as a marker that name is trimmed
+                        name = name[: cm[x].Width - 1]
+                        name += ">"
+                }
+
+                for _, s := range name {
                         fv.Canvas.Data[idx].Symbol = s
                         fv.Canvas.Data[idx].Color  = cl
                         idx += 1
