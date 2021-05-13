@@ -1,10 +1,13 @@
-package file_view
+package fileview
 
 import (
         "sort"
         "strings"
 )
 
+//synthetic type to implement slice sorting by file name
+//Comparison is case insensitive, directories go before files
+//parent directory ".." is first
 type EntryByName []*FileEntry
 
 func (e EntryByName) Len() int {

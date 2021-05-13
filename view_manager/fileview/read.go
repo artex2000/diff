@@ -1,21 +1,12 @@
-package file_view
+package fileview
 
 import (
-        //"fmt"
         "os"
         "log"
-        "time"
         "runtime"
         "strings"
         "path/filepath"
 )
-
-type FileEntry struct {
-        Name    string
-        ModTime time.Time
-        Dir     bool
-        State   int
-}
 
 func (fv *FileView) GetFiles() error {
         f, err := os.Open(fv.CurrentPath)
@@ -90,3 +81,14 @@ func GetRootDirectory(name string) string {
         }
 }
 
+//Before entering a directory or doing something to the file
+//we will check the permissions
+func IsAccessible(path string) bool {
+        //TODO: Implement sane permission check for linux
+        f, err := os.Open(path)
+        if err != nil {
+                return false
+        }
+        f.Close()
+        return true
+}

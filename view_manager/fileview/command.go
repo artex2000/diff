@@ -1,7 +1,6 @@
-package file_view
+package fileview
 
 import (
-        "os"
         "path/filepath"
 )
 
@@ -200,8 +199,9 @@ func (fv *FileView) MoveIntoDir() {
         if fv.Files[idx].Name == ".." {
                 path := filepath.Dir(fv.CurrentPath)
                 if IsAccessible(path) {
-                        pos := fv.LastPosition[len (fv.LastPosition) - 1]
-                        fv.LastPosition = fv.LastPosition[: len (fv.LastPosition) - 1]
+                        last_idx := len (fv.LastPosition) - 1
+                        pos := fv.LastPosition[last_idx]
+                        fv.LastPosition = fv.LastPosition[: last_idx]
                         fv.FocusX    = pos.X
                         fv.FocusY    = pos.Y
                         fv.BaseIndex = pos.Base
@@ -220,14 +220,5 @@ func (fv *FileView) MoveIntoDir() {
                 }
         }
         fv.Draw()
-}
-
-func IsAccessible(path string) bool {
-        f, err := os.Open(path)
-        if err != nil {
-                return false
-        }
-        f.Close()
-        return true
 }
 

@@ -1,5 +1,30 @@
 package view_manager
 
+func GetKeyIdFromAlias(alias string) int {
+        for i, s := range (KeyIdAlias) {
+                if s == alias {
+                        return i
+                }
+        }
+        return Key_None
+}
+
+func GetKeyIdName(id int) string {
+        return KeyIdName[id]
+}
+
+func GetKeyIdAlias(id int) string {
+        return KeyIdAlias[id]
+}
+
+func GetModName(mod int) string {
+        return ModName[mod >> 16]
+}
+
+func GetModAlias(mod int) string {
+        return ModAlias[mod >> 16]
+}
+
 const (
         Key_None         = iota
 
@@ -23,6 +48,37 @@ const (
         Key_F10
         Key_F11
         Key_F12
+
+        //Movement keys
+        Key_Home
+        Key_End
+        Key_PgUp
+        Key_PgDown
+        Key_Up
+        Key_Left
+        Key_Right
+        Key_Down
+
+        //Keys is this range: Key_Space <= X <= Key_Z
+        //are called Rune-Insert-Keys, because when the View is
+        //in Insert mode keypress of key in this range will
+        //produce one symbol to be put on the screen
+
+        //Space
+        Key_Space
+
+        //Punctuation and math keys
+        Key_BackTick
+        Key_Minus
+        Key_Equal
+        Key_LeftBraket
+        Key_RightBraket
+        Key_SemiColon
+        Key_SingleQuote
+        Key_Comma
+        Key_Dot
+        Key_Slash
+        Key_BackSlash
 
         //Number keys
         Key_0
@@ -63,30 +119,7 @@ const (
         Key_X
         Key_Y
         Key_Z
-
-        //Punctuation and math keys
-        Key_Space
-        Key_BackTick
-        Key_Minus
-        Key_Equal
-        Key_LeftBraket
-        Key_RightBraket
-        Key_SemiColon
-        Key_SingleQuote
-        Key_Comma
-        Key_Dot
-        Key_Slash
-        Key_BackSlash
-
-        //Movement keys
-        Key_Home
-        Key_End
-        Key_PgUp
-        Key_PgDown
-        Key_Up
-        Key_Left
-        Key_Right
-        Key_Down
+        // End of printable range
 
         //Alteration keys
         Key_Shift 
@@ -111,7 +144,7 @@ const (
         Key_Menu
 )
 
-var CommandName = []string { 
+var KeyIdName = []string { 
         "Key_None",
         "Key_Esc",
         "Key_Enter",
@@ -131,6 +164,29 @@ var CommandName = []string {
         "Key_F10",
         "Key_F11",
         "Key_F12",
+
+        "Key_Space",
+
+        "Key_Home",
+        "Key_End",
+        "Key_PgUp",
+        "Key_PgDown",
+        "Key_Up",
+        "Key_Left",
+        "Key_Right",
+        "Key_Down",
+
+        "Key_BackTick",
+        "Key_Minus",
+        "Key_Equal",
+        "Key_LeftBraket",
+        "Key_RightBraket",
+        "Key_SemiColon",
+        "Key_SingleQuote",
+        "Key_Comma",
+        "Key_Dot",
+        "Key_Slash",
+        "Key_BackSlash",
 
         "Key_0",
         "Key_1",
@@ -170,35 +226,13 @@ var CommandName = []string {
         "Key_Y",
         "Key_Z",
 
-        "Key_Space",
-        "Key_BackTick",
-        "Key_Minus",
-        "Key_Equal",
-        "Key_LeftBraket",
-        "Key_RightBraket",
-        "Key_SemiColon",
-        "Key_SingleQuote",
-        "Key_Comma",
-        "Key_Dot",
-        "Key_Slash",
-        "Key_BackSlash",
-
-        "Key_Home",
-        "Key_End",
-        "Key_PgUp",
-        "Key_PgDown",
-        "Key_Up",
-        "Key_Left",
-        "Key_Right",
-        "Key_Down",
-
         "Key_Shift", 
         "Key_Ctrl",
         "Key_Alt",
 
-        "Key_Caps",
         "Key_Win",
         "Key_Fn",
+        "Key_Caps",
         "Key_Pause",
         "Key_PrScr",
 
@@ -212,37 +246,110 @@ var CommandName = []string {
         "Key_Menu",
 }
 
-func GetKeyIdName(cmd int) string {
-        return CommandName[cmd]
+var ModName = []string {
+        "",
+        "Shift",
+        "Ctrl",
+        "Ctrl|Shift",
+        "Alt",
+        "Alt|Shift",
+        "Ctrl|Alt",
+        "Ctrl|Alt|Shift",
 }
 
+var ModAlias = []string {
+        "",
+        "S",
+        "C",
+        "CS",
+        "A",
+        "AS",
+        "CA",
+        "CAS",
+}
 
+var KeyIdAlias = []string {
+        "????",
 
+        //Action keys
+        "Esc",
+        "Enter",
+        "Tab", 
+        "Del",
+        "BackSpace",
+        
+        //Function keys
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F5",
+        "F6",
+        "F7",
+        "F8",
+        "F9",
+        "F10",
+        "F11",
+        "F12",
 
+        "Space",
 
+        "Home",
+        "End",
+        "PgUp",
+        "PgDown",
+        "Up",
+        "Left",
+        "Right",
+        "Down",
 
+        "`",
+        "-",
+        "=",
+        "[",
+        "]",
+        ";",
+        "'",
+        ",",
+        ".",
+        "/",
+        "\\",
 
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
+}

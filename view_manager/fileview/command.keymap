@@ -1,0 +1,29 @@
+// Mapping of key presses to application commands
+// In navigation mode
+
+// KeyPress legend
+//
+// <A>		Key 'A'
+// <S-A>	Shift-A
+// <C-A>	Ctrl-A
+// <M-A>	Alt-A
+// <F10>	Key F10
+// <1>		Key 1
+// <A><B>	Fast keypress A,B (two keypress chord)
+// <S-A><B><C>  Fast keypress Shift-A, then B then C (three keypress chord)
+
+
+// CommandID		KeyPress		//Help (optional)
+
+CmdMoveTop			<G><G>		//Move to the left top corner
+CmdMoveBottom			<S-G>		//Move to the left top corner
+CmdMoveUp			<K>
+CmdMoveDown			<J>
+CmdMoveLeft			<H>
+CmdMoveRight			<L>
+CmdMoveCurrentColumnTop		<S-K>
+CmdMoveCurrentColumnBottom	<S-J>
+CmdIncrementColumns		<->
+CmdDecrementColumns		<=>
+CmdEnterDirectory		<Enter>
+CmdQuit				<Esc>

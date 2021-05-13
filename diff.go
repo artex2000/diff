@@ -6,7 +6,7 @@ import (
 	"github.com/Microsoft/go-winio"
         wt "github.com/artex2000/diff/winterm"
         vm "github.com/artex2000/diff/view_manager"
-        fv "github.com/artex2000/diff/view_manager/file_view"
+        fv "github.com/artex2000/diff/view_manager/fileview"
 )
 
 
@@ -28,6 +28,7 @@ func main() {
 
         root := &vm.ViewManager{}
         root.SetColorTheme(nil)
+        root.Init()
         root.Running = true
         root.Dirty   = false
         root.Screen  = s

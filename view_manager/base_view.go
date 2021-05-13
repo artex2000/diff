@@ -5,14 +5,6 @@ import (
         wt "github.com/artex2000/diff/winterm"
 )
 
-type BaseView struct {
-        Position        ViewPlacement
-        Canvas          wt.ScreenBuffer
-        PositionType    int
-        Visible         bool
-        Parent          *ViewManager
-}
-
 func  (v *BaseView) SetPosition(pos ViewPlacement) {
         if v.Position == pos {
                 return 
@@ -35,6 +27,21 @@ func  (v *BaseView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
         v.Visible = true
         v.Parent = p
         v.SetPosition(pl)
+        v.InsertMode = false
+        v.RawMode = true
+}
+
+func (v *BaseView) GetKeyboardMap() (normal, insert []UserKeyMap) {
+        normal, insert = nil, nil
+        return
+}
+
+func (v *BaseView) IsInsertMode() bool {
+        return v.InsertMode
+}
+
+func (v *BaseView) IsRawMode() bool {
+        return v.RawMode
 }
 
 func  (v *BaseView) Draw()  {
@@ -53,16 +60,12 @@ func  (v *BaseView) SetVisible(visible bool)  {
         }
 }
 
-func  (v *BaseView) ProcessEvent(e wt.EventRecord) int {
-        if e.EventType == wt.KeyEvent && e.Key.KeyDown {
-                switch e.Key.KeyCode {
-                case 0x1b:
-                        return ViewEventClose
-                default:
-                       return ViewEventDiscard
-                }
+func  (v *BaseView) ProcessKeyEvent(kc KeyCommand) int {
+        key := kc.(KeyDataRaw)
+        if key.KeyId == Key_Esc && key.KeyDown {
+                return ViewEventClose
         }
-        return ViewEventPass
+        return ViewEventDiscard
 }
 
 func  (v *BaseView) ProcessTimerEvent() int {

@@ -8,6 +8,17 @@ func CreateMapKey(key, scan uint16) uint64 {
         return r
 }
 
+// Returns KeyID constant (see key_id.go for possible values
+// based on passed keycode and scan code
+func GetKeyIdFromRaw(key, scan uint16) int {
+        mk := CreateMapKey(key, scan)
+        if id, ok := KeyMap[mk]; ok {
+                return id
+        } else {
+                return Key_None
+        }
+}
+
 var KeyMap = map[uint64]int {
 0x001b0001 : Key_Esc,
 0x000d001c : Key_Enter,

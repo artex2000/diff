@@ -1,0 +1,117 @@
+// Mapping of key presses to insert characters
+// In insert mode
+
+// KeyPress legend
+//
+// <A>		Key 'A'
+// <S-A>	Shift-A
+// <C-A>	Ctrl-A
+// <M-A>	Alt-A
+// <F10>	Key F10
+// <1>		Key 1
+// <A><B>	Fast keypress A,B (two keypress chord)
+// <S-A><B><C>  Fast keypress Shift-A, then B then C (three keypress chord)
+
+Language	English
+
+// Symbol	KeyPress	UTF16 Value
+
+a		<A>		0061
+b		<B>		0062
+c		<C>		0063
+d		<D>		0064
+e		<E>		0065
+f		<F>		0066
+g		<G>		0067
+h		<H>		0068
+i		<I>		0069
+j		<J>		006A
+k		<K>		006B
+l		<L>		006C
+m		<M>		006D
+n		<N>		006E
+o		<O>		006F
+p		<P>		0070
+q		<Q>		0071
+r		<R>		0072
+s		<S>		0073
+t		<T>		0074
+u		<U>		0075
+v		<V>		0076
+w		<W>		0077
+x		<X>		0078
+y		<Y>		0079
+z		<Z>		007A
+
+A		<S-A>		0041
+B		<S-B>		0042
+C		<S-C>		0043
+D		<S-D>		0044
+E		<S-E>		0045
+F		<S-F>		0046
+G		<S-G>		0047
+H		<S-H>		0048
+I		<S-I>		0049
+J		<S-J>		004A
+K		<S-K>		004B
+L		<S-L>		004C
+M		<S-M>		004D
+N		<S-N>		004E
+O		<S-O>		004F
+P		<S-P>		0050
+Q		<S-Q>		0051
+R		<S-R>		0052
+S		<S-S>		0053
+T		<S-T>		0054
+U		<S-U>		0055
+V		<S-V>		0056
+W		<S-W>		0057
+X		<S-X>		0058
+Y		<S-Y>		0059
+Z		<S-Z>		005A
+
+0		<0>		0030
+1		<1>		0031
+2		<2>		0032
+3		<3>		0033
+4		<4>		0034
+5		<5>		0035
+6		<6>		0036
+7		<7>		0037
+8		<8>		0038
+9		<9>		0039
+`		<`>		0060
+-		<->		002D
+=		<=>		003D
+[		<[>		005B
+]		<]>		005D
+;		<;>		003B
+'		<'>		0027
+,		<,>		002C
+.		<.>		002E
+/		</>		002F
+\		<\>		005C
+
+)		<S-0>		0029
+!		<S-1>		0021
+@		<S-2>		0040
+#		<S-3>		0023
+$		<S-4>		0024
+%		<S-5>		0025
+^		<S-6>		005E
+&		<S-7>		0026
+*		<S-8>		002A
+(		<S-9>		0028
+~		<S-`>		007E
+_		<S-->		005F
++		<S-=>		002B
+{		<S-[>		007B
+}		<S-]>		007D
+:		<S-;>		003A
+"		<S-'>		0022
+<		<S-,>		003C
+>		<S-.>		003E
+?		<S-/>		003F
+|		<S-\>		007C
+
+space		<Space>		0020
