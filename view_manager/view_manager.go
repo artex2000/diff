@@ -149,14 +149,12 @@ func (vm *ViewManager) ProcessTimerEvent() error {
                 vm.Input.Elapsed += 1
         }
 
-        /*
         f := vm.Views[vm.Focus.ViewIndex]
         r := f.ProcessTimerEvent()
         switch r {
         case ViewEventClose:
                 vm.RemoveView()
         }
-        */
 
         return nil
 }

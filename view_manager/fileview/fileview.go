@@ -2,12 +2,15 @@ package fileview
 
 import (
         "log"
+        "time"
         . "github.com/artex2000/diff/view_manager"
 )
 
 func (fv *FileView) ProcessTimerEvent() int {
-        if fv.AppKeyState.CountDown {
-                fv.AppKeyState.Elapsed += 1
+        fv.Bar.Elapsed += 1
+        if fv.Bar.Elapsed > 20 {
+                fv.UpdateTime()
+                fv.Bar.Elapsed = 0
         }
         return ViewEventDiscard
 }
@@ -57,6 +60,7 @@ func (fv *FileView) Draw() {
         fv.DrawSeparators(cm)
         fv.DrawFileList(cm)
         fv.DrawFocusSlot(0, 0, cm, true)
+        fv.DrawStatusBar()
         fv.BaseView.Draw()
 }
 
@@ -77,7 +81,7 @@ func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
         }
         fv.CurrentPath = GetRootDirectory(root)
         fv.Columns       = 3
-        fv.Rows          = fv.Canvas.SizeY
+        fv.Rows          = fv.Canvas.SizeY - 1
         fv.FocusX        = 0
         fv.FocusY        = 0
         fv.BaseIndex     = 0
@@ -87,6 +91,8 @@ func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
 
         fv.InsertMode     = false
         fv.RawMode        = false
+        fv.Bar            = &StatusBar{}
+        fv.Bar.Init(fv.Canvas.SizeX)
 }
 
 func (fv *FileView) IsInsertMode() bool {
@@ -123,6 +129,27 @@ func (fv *FileView) DrawSeparators(cm []ColumnMetrics) {
                 }
         }
 }
+
+func (fv *FileView) UpdateTime() {
+        idx := fv.Rows * fv.Canvas.SizeX
+        s := time.Now().Format("15:04:05")
+        for i, c := range (s) {
+                fv.Canvas.Data[idx + i + fv.Bar.Time.Origin].Symbol = c
+        }
+        fv.BaseView.Draw()
+}
+
+func (fv *FileView) DrawStatusBar() {
+        cl := fv.Parent.GetSelectTextColor()
+        idx := fv.Rows * fv.Canvas.SizeX
+        for i := 0; i < fv.Canvas.SizeX; i += 1 {
+                fv.Canvas.Data[idx + i].Color = cl
+        }
+        fv.UpdateTime()
+        fv.Bar.Elapsed = 0
+}
+
+
 
 func (fv *FileView) DrawFocusSlot(OldX, OldY int, cm []ColumnMetrics, set bool) {
         x, y := fv.FocusX, fv.FocusY

@@ -59,6 +59,7 @@ type FileView struct {
         AppState        int
         Files           []*FileEntry
         LastPosition    []SlotPosition
+        Bar             *StatusBar
 }
 
 // Struct to describe file shown in the view
@@ -68,3 +69,18 @@ type FileEntry struct {
         Dir     bool            //true if the file is a directory
         State   int             //For color control (see above defined constants)
 }
+
+type StatusBar struct {
+        Elapsed int
+        Clock   time.Time
+        Time    StatusBarField
+        Status  StatusBarField
+}
+
+type StatusBarField struct {
+        Origin          int
+        Width           int
+        Alignment       int
+        Content         string
+}
+
