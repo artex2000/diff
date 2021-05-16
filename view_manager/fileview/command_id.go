@@ -17,7 +17,7 @@ const (
         CmdIncrementColumns
         CmdDecrementColumns
 
-        CmdEnterDirectory
+        CmdEnter
 
         CmdInputCommit
         CmdInputCancel
@@ -44,7 +44,7 @@ var CommandName = []string {
         "CmdIncrementColumns",
         "CmdDecrementColumns",
 
-        "CmdEnterDirectory",
+        "CmdEnter",
 
         "CmdInputCommit",
         "CmdInputCancel",

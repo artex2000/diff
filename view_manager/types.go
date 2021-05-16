@@ -56,6 +56,7 @@ const (
         KeyCommandExecute                      //Decode following data as CommandId
 )
 
+
 // Child view origin and size
 type ViewPlacement struct {
         X, Y     int
@@ -119,6 +120,7 @@ type BaseView struct {
         RawMode         bool
         InsertMode      bool
         Visible         bool
+        Focus           bool
         Parent          *ViewManager
 }
 

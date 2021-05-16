@@ -83,12 +83,12 @@ func GetRootDirectory(name string) string {
 
 //Before entering a directory or doing something to the file
 //we will check the permissions
-func IsAccessible(path string) bool {
+func OpenDir(path string) error {
         //TODO: Implement sane permission check for linux
         f, err := os.Open(path)
         if err != nil {
-                return false
+                return err
         }
         f.Close()
-        return true
+        return nil
 }

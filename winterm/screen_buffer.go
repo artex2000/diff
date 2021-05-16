@@ -48,12 +48,15 @@ func (s ScreenBuffer) WriteRegion(t ScreenBuffer, x, y int) {
         }
 }
 
-func (s ScreenBuffer) DrawSingleVerticalSplit(x int, color uint32) {
+func (s ScreenBuffer) DrawSingleVerticalLine(column int, start_row int, length int, color uint32) {
         gl := rune(uc.LINE_VERTICAL_LIGHT)
 
+        if (start_row + length) > s.SizeY {
+                length = s.SizeY - start_row
+        }
         //Draw Left Vertical line
-        idx := x
-        for i := 0; i < s.SizeY; i++ {
+        idx := column
+        for i := start_row; i < length; i++ {
                 s.Data[idx + i * s.SizeX].Symbol = gl
                 s.Data[idx + i * s.SizeX].Color  = color
         }

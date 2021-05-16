@@ -23,7 +23,7 @@ var NormalModeMap = []UserKeyMap {
         { "<S-J>",       CmdMoveCurrentColumnBottom,	"" },
         { "<S-->",       CmdIncrementColumns,		"" },
         { "<S-=>",       CmdDecrementColumns,		"" },
-        { "<Enter>",     CmdEnterDirectory,		"" },
+        { "<Enter>",     CmdEnter,       		"" },
         { "<Esc>",       CmdQuit,		        "" },
 }
 

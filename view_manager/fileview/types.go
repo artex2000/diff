@@ -29,10 +29,45 @@ const (
         AppStateInsert
 )
 
+const (
+        ViewDrawNone     = iota
+        ViewDrawAll
+        ViewDrawFocusChange
+        ViewDrawTimer
+        ViewDrawStatusError
+)
+
+//Status bar alignment and width
+//we sort items within status bar using these two properties
+//fixed go first (on both ends)
+//next go flex (on both ends)
+//next goes span (should we have more than one?
+//since flex has undetermined size view should call SetContent before drawing
+const (
+        StatusBarLeft   = iota
+        StatusBarRight
+)
+
+const (
+        StatusBarFixed  = iota          //item has fixed width
+        StatusBarFlex                   //item width is content-dependent
+        StatusBarSpan                   //item takes all available space
+)
+
+const (
+        StatusBarClock  = iota
+        StatusBarInfo
+)
+
 // Metrics to control Column Width
 type ColumnMetrics struct {
         Offset  int             // Offset of the column first character from the left
         Width   int             // Width of column in characters
+}
+
+type FocusPos struct {
+        X       int
+        Y       int
 }
 
 // We use this structure to remember directory position in the view
@@ -48,8 +83,7 @@ type FileView struct {
         BaseView
         Columns         int             //Current number of columns
         Rows            int             //Current number of rows
-        FocusX          int
-        FocusY          int
+        Focus           FocusPos
         BaseIndex       int             //File index of top-left slot
         SortType        int
         HideDotFiles    bool
@@ -71,16 +105,18 @@ type FileEntry struct {
 }
 
 type StatusBar struct {
-        Elapsed int
-        Clock   time.Time
-        Time    StatusBarField
-        Status  StatusBarField
+        Origin          int     //we need origin in case status bar shares last row with TabBar
+        Width           int
+        Items           []*StatusBarItem  //this will be sorted list. View maintains unsorted list
 }
 
-type StatusBarField struct {
+type StatusBarItem struct {
+        ItemId          int
         Origin          int
         Width           int
         Alignment       int
+        WidthType       int
+        Color           uint32
         Content         string
 }
 

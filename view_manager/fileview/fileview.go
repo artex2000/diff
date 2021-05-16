@@ -2,16 +2,13 @@ package fileview
 
 import (
         "log"
-        "time"
+        "fmt"
+        "path/filepath"
+//        "time"
         . "github.com/artex2000/diff/view_manager"
 )
 
 func (fv *FileView) ProcessTimerEvent() int {
-        fv.Bar.Elapsed += 1
-        if fv.Bar.Elapsed > 20 {
-                fv.UpdateTime()
-                fv.Bar.Elapsed = 0
-        }
         return ViewEventDiscard
 }
 
@@ -19,35 +16,50 @@ func (fv *FileView) ProcessKeyEvent(kc KeyCommand) int {
         //Here we will type assert either to rune or cmd id depending on view mode
         cmd := kc.(int)
         log.Printf("Received: %v\n", GetCommandName(cmd))
+
+        var r int
+        var err error
+        var extra interface{}
         switch cmd {
         case CmdQuit:
                 return ViewEventClose
         case CmdDecrementColumns:
-                fv.DecrementColumns()
+                r, _, err = fv.DecrementColumns()
         case CmdIncrementColumns:
-                fv.IncrementColumns()
+                r, _, err = fv.IncrementColumns()
         case CmdMoveUp:
-                fv.MoveUp()
+                r, extra, err = fv.MoveUp()
         case CmdMoveDown:
-                fv.MoveDown()
+                r, extra, err = fv.MoveDown()
         case CmdMoveCurrentColumnTop:
-                fv.MoveColumnTop()
+                r, extra, err = fv.MoveColumnTop()
         case CmdMoveCurrentColumnBottom:
-                fv.MoveColumnBottom()
+                r, extra, err = fv.MoveColumnBottom()
         case CmdMoveTop:
-                fv.MoveTop()
+                r, extra, err = fv.MoveTop()
         case CmdMoveBottom:
-                fv.MoveBottom()
+                r, extra, err = fv.MoveBottom()
         case CmdMoveLeft:
-                fv.MoveLeft()
+                r, extra, err = fv.MoveLeft()
         case CmdMoveRight:
-                fv.MoveRight()
-        case CmdEnterDirectory:
-                idx := fv.GetIndexFromSlot(fv.FocusX, fv.FocusY)
-                if fv.Files[idx].State != FileEntryHidden && fv.Files[idx].State != FileEntryNotAccessible {
-                        if fv.Files[idx].Dir {
-                                fv.MoveIntoDir()
-                        }
+                r, extra, err = fv.MoveRight()
+        case CmdEnter:
+                idx := fv.GetIndexFromSlot(fv.Focus.X, fv.Focus.Y)
+                if fv.Files[idx].Dir {
+                        r, extra, err = fv.MoveIntoDir()
+                }
+        default:
+                r, extra, err = ViewDrawNone, nil, nil
+        }
+
+        if err != nil {
+                fv.DrawStatusError(err)
+        } else {
+                switch r {
+                case ViewDrawAll:
+                        fv.Draw()
+                case ViewDrawFocusChange:
+                        fv.DrawFocusChange(extra.(FocusPos))
                 }
         }
         return ViewEventDiscard
@@ -60,16 +72,62 @@ func (fv *FileView) Draw() {
         fv.DrawSeparators(cm)
         fv.DrawFileList(cm)
         fv.DrawFocusSlot(0, 0, cm, true)
+
+        var path string
+        idx := fv.GetIndexFromSlot(fv.Focus.X, fv.Focus.Y)
+        if fv.Files[idx].Name == ".." {
+                path = fv.CurrentPath
+        } else {
+                path = filepath.Join(fv.CurrentPath, fv.Files[idx].Name)
+        }
+
+        fv.Bar.SetColor(StatusBarInfo, fv.Parent.GetSelectTextColor())
+        fv.Bar.SetContent(StatusBarInfo, path)
+        fv.DrawStatusBar()
+
+        fv.BaseView.Draw()
+}
+
+func (fv *FileView) DrawFocusChange(f FocusPos) {
+        cm := fv.GetColumnMetrics()
+        fv.DrawFocusSlot(f.X, f.Y, cm, false)       //when reset focus x, y correspond to old focus
+        fv.DrawFocusSlot(0, 0, cm, true)        //when set focus x,y are ignored and FocusX, FocusY are used
+
+        var path string
+        idx := fv.GetIndexFromSlot(fv.Focus.X, fv.Focus.Y)
+        if fv.Files[idx].Name == ".." {
+                path = fv.CurrentPath
+        } else {
+                path = filepath.Join(fv.CurrentPath, fv.Files[idx].Name)
+        }
+
+        fv.Bar.SetContent(StatusBarInfo, path)
+        fv.Bar.SetColor(StatusBarInfo, fv.Parent.GetSelectTextColor())
+        fv.DrawStatusBar()
+
+        fv.BaseView.Draw()
+}
+
+func (fv *FileView) DrawStatusError(err error) {
+        s := fmt.Sprintf("%v", err)
+        fv.Bar.SetContent(StatusBarInfo, s)
+        fv.Bar.SetColor(StatusBarInfo, fv.Parent.GetErrorColor())
         fv.DrawStatusBar()
         fv.BaseView.Draw()
 }
 
-func (fv *FileView) DrawFocusChange(x, y int) {
-        cm := fv.GetColumnMetrics()
-        fv.DrawFocusSlot(x, y, cm, false)       //when reset focus x, y correspond to old focus
-        fv.DrawFocusSlot(0, 0, cm, true)        //when set focus x,y are ignored and FocusX, FocusY are used
-        fv.BaseView.Draw()
+func (fv *FileView) SetPosition(pos ViewPlacement) {
+        log.Println("FileView SetPosition")
+        if fv.Position == pos {
+                return 
+        }
+
+        fv.BaseView.SetPosition(pos)
+        fv.Bar.Resize(fv.Canvas.SizeX)
+
+        //we don't call Draw() here - it will be called by view-manager
 }
+
 
 func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
         log.Println("FileView init")
@@ -82,17 +140,25 @@ func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
         fv.CurrentPath = GetRootDirectory(root)
         fv.Columns       = 3
         fv.Rows          = fv.Canvas.SizeY - 1
-        fv.FocusX        = 0
-        fv.FocusY        = 0
+        fv.Focus.X       = 0
+        fv.Focus.Y       = 0
         fv.BaseIndex     = 0
         fv.HideDotFiles  = false
         fv.FolderChange  = true
         fv.SortType      = FileSortName
 
+        //these two are overridden from base view, that's why base_veiw.init must be 
+        //called prior to that
         fv.InsertMode     = false
         fv.RawMode        = false
-        fv.Bar            = &StatusBar{}
-        fv.Bar.Init(fv.Canvas.SizeX)
+
+        fv.Bar = &StatusBar{}
+        cl := fv.Parent.GetSelectTextColor()
+        sb := []*StatusBarItem {
+                { StatusBarInfo, 0, 0, StatusBarLeft, StatusBarSpan, cl, "" },
+                { StatusBarClock, 0, 5, StatusBarRight, StatusBarFixed, cl, "00:00" },
+        }
+        fv.Bar.Init(fv.Canvas.SizeX, sb)
 }
 
 func (fv *FileView) IsInsertMode() bool {
@@ -124,12 +190,13 @@ func (fv *FileView) DrawSeparators(cm []ColumnMetrics) {
         for _, w := range cm {
                 x += w.Width
                 if x < fv.Canvas.SizeX {
-                        fv.Canvas.DrawSingleVerticalSplit(x, color)
+                        fv.Canvas.DrawSingleVerticalLine(x, 0, fv.Rows, color)
                         x += 1
                 }
         }
 }
 
+/*
 func (fv *FileView) UpdateTime() {
         idx := fv.Rows * fv.Canvas.SizeX
         s := time.Now().Format("15:04:05")
@@ -138,21 +205,28 @@ func (fv *FileView) UpdateTime() {
         }
         fv.BaseView.Draw()
 }
+*/
 
 func (fv *FileView) DrawStatusBar() {
-        cl := fv.Parent.GetSelectTextColor()
         idx := fv.Rows * fv.Canvas.SizeX
-        for i := 0; i < fv.Canvas.SizeX; i += 1 {
-                fv.Canvas.Data[idx + i].Color = cl
+
+        for _, t := range (fv.Bar.Items) {
+                log.Printf("origin, width %d %d\n", t.Origin, t.Width)
+                for i, s := range (t.Content) {
+                        fv.Canvas.Data[idx + t.Origin + i].Symbol = s
+                        fv.Canvas.Data[idx + t.Origin + i].Color  = t.Color
+                }
+                for i := len (t.Content); i < t.Width; i += 1 {
+                        fv.Canvas.Data[idx + t.Origin + i].Symbol = ' '
+                        fv.Canvas.Data[idx + t.Origin + i].Color  = t.Color
+                }
         }
-        fv.UpdateTime()
-        fv.Bar.Elapsed = 0
 }
 
 
 
 func (fv *FileView) DrawFocusSlot(OldX, OldY int, cm []ColumnMetrics, set bool) {
-        x, y := fv.FocusX, fv.FocusY
+        x, y := fv.Focus.X, fv.Focus.Y
         cl   := fv.Parent.GetSelectTextColor()
         if !set {
                 x, y = OldX, OldY

@@ -29,4 +29,8 @@ func (vm *ViewManager) GetAccentYellowColor() uint32 {
         return (vm.Theme.DarkestBackground << 4) | vm.Theme.AccentYellow
 }
 
+func (vm *ViewManager) GetErrorColor() uint32 {
+        return (vm.Theme.AccentRed << 4) | vm.Theme.LightBackground
+}
+
 
