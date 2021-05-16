@@ -19,6 +19,9 @@ const (
 
         CmdEnter
 
+        CmdFilter
+
+        CmdInsertRune
         CmdInputCommit
         CmdInputCancel
 
@@ -46,6 +49,9 @@ var CommandName = []string {
 
         "CmdEnter",
 
+        "CmdFilter",
+
+        "CmdInsertRune",
         "CmdInputCommit",
         "CmdInputCancel",
 

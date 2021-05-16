@@ -34,6 +34,9 @@ const (
         ViewDrawAll
         ViewDrawFocusChange
         ViewDrawTimer
+        ViewDrawFilterEnter
+        ViewDrawFilterInsert
+        ViewDrawFilterExit
         ViewDrawStatusError
 )
 
@@ -57,6 +60,7 @@ const (
 const (
         StatusBarClock  = iota
         StatusBarInfo
+        StatusBarFilter
 )
 
 // Metrics to control Column Width
@@ -89,11 +93,10 @@ type FileView struct {
         HideDotFiles    bool
         FolderChange    bool            //Set if switch to new folder
         CurrentPath     string          //Full path to current directory in the view
-        AppKeyState     *KeyState
-        AppState        int
         Files           []*FileEntry
         LastPosition    []SlotPosition
         Bar             *StatusBar
+        Input           []uint16
 }
 
 // Struct to describe file shown in the view

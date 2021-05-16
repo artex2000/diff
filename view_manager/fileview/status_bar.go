@@ -57,7 +57,11 @@ func (sb *StatusBar) Resize(width int) {
 func (sb *StatusBar) SetContent(id int, data string) {
         for _, t := range (sb.Items) {
                 if t.ItemId == id {
+                        old := len (t.Content)
                         t.Content = data
+                        if t.WidthType == StatusBarFlex && old != len (t.Content) {
+                                sb.Resize(sb.Width)
+                        }
                         break
                 }
         }

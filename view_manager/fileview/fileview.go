@@ -4,6 +4,7 @@ import (
         "log"
         "fmt"
         "path/filepath"
+        "unicode/utf16"
 //        "time"
         . "github.com/artex2000/diff/view_manager"
 )
@@ -14,15 +15,28 @@ func (fv *FileView) ProcessTimerEvent() int {
 
 func (fv *FileView) ProcessKeyEvent(kc KeyCommand) int {
         //Here we will type assert either to rune or cmd id depending on view mode
-        cmd := kc.(int)
-        log.Printf("Received: %v\n", GetCommandName(cmd))
-
+        ret := ViewEventDiscard
+        cmd := CmdNone
         var r int
         var err error
         var extra interface{}
+
+        if fv.InsertMode {
+                switch kc.(type) {
+                case int:
+                        cmd = kc.(int)
+                case uint16:
+                        extra = kc.(uint16)
+                        cmd = CmdInsertRune
+                }
+        } else {
+                cmd = kc.(int)
+        }
+        log.Printf("Received: %v\n", GetCommandName(cmd))
+
         switch cmd {
         case CmdQuit:
-                return ViewEventClose
+                ret = ViewEventClose
         case CmdDecrementColumns:
                 r, _, err = fv.DecrementColumns()
         case CmdIncrementColumns:
@@ -48,6 +62,17 @@ func (fv *FileView) ProcessKeyEvent(kc KeyCommand) int {
                 if fv.Files[idx].Dir {
                         r, extra, err = fv.MoveIntoDir()
                 }
+        case CmdFilter:
+                fv.InsertMode = true
+                ret = ViewEventModeChange
+                r = ViewDrawFilterEnter
+        case CmdInputCommit, CmdInputCancel:
+                fv.InsertMode = false
+                ret = ViewEventModeChange
+                r = ViewDrawFilterExit
+                extra = true
+        case CmdInsertRune:
+                r = ViewDrawFilterInsert
         default:
                 r, extra, err = ViewDrawNone, nil, nil
         }
@@ -60,9 +85,15 @@ func (fv *FileView) ProcessKeyEvent(kc KeyCommand) int {
                         fv.Draw()
                 case ViewDrawFocusChange:
                         fv.DrawFocusChange(extra.(FocusPos))
+                case ViewDrawFilterInsert:
+                        fv.DrawFilterInsert(extra.(uint16))
+                case ViewDrawFilterExit:
+                        fv.DrawFilterExit(extra.(bool))
+                case ViewDrawFilterEnter:
+                        fv.DrawFilterEnter()
                 }
         }
-        return ViewEventDiscard
+        return ret
 }
 
 //Use this to redraw whole view
@@ -116,6 +147,44 @@ func (fv *FileView) DrawStatusError(err error) {
         fv.BaseView.Draw()
 }
 
+func (fv *FileView) DrawFilterEnter() {
+        fv.Bar.SetContent(StatusBarInfo, "Filter:")
+        fv.Bar.SetColor(StatusBarInfo, fv.Parent.GetSelectTextColor())
+        fv.DrawStatusBar()
+
+        fv.BaseView.Draw()
+}
+
+func (fv *FileView) DrawFilterInsert(s uint16) {
+        fv.Input = append (fv.Input, s)
+        f := string(utf16.Decode(fv.Input))
+        out := fmt.Sprintf("|%s|", f)
+        fv.Bar.SetContent(StatusBarFilter, out)
+
+        c := fmt.Sprintf("Filter: %s", f)
+        fv.Bar.SetContent(StatusBarInfo, c)
+        fv.Bar.SetColor(StatusBarInfo, fv.Parent.GetSelectTextColor())
+        fv.DrawStatusBar()
+
+        fv.BaseView.Draw()
+}
+
+func (fv *FileView) DrawFilterExit(b bool) {
+        var path string
+        idx := fv.GetIndexFromSlot(fv.Focus.X, fv.Focus.Y)
+        if fv.Files[idx].Name == ".." {
+                path = fv.CurrentPath
+        } else {
+                path = filepath.Join(fv.CurrentPath, fv.Files[idx].Name)
+        }
+
+        fv.Bar.SetContent(StatusBarInfo, path)
+        fv.Bar.SetColor(StatusBarInfo, fv.Parent.GetSelectTextColor())
+        fv.DrawStatusBar()
+
+        fv.BaseView.Draw()
+}
+
 func (fv *FileView) SetPosition(pos ViewPlacement) {
         log.Println("FileView SetPosition")
         if fv.Position == pos {
@@ -156,6 +225,7 @@ func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
         cl := fv.Parent.GetSelectTextColor()
         sb := []*StatusBarItem {
                 { StatusBarInfo, 0, 0, StatusBarLeft, StatusBarSpan, cl, "" },
+                { StatusBarFilter, 0, 0, StatusBarRight, StatusBarFlex, cl, "" },
                 { StatusBarClock, 0, 5, StatusBarRight, StatusBarFixed, cl, "00:00" },
         }
         fv.Bar.Init(fv.Canvas.SizeX, sb)
@@ -211,7 +281,6 @@ func (fv *FileView) DrawStatusBar() {
         idx := fv.Rows * fv.Canvas.SizeX
 
         for _, t := range (fv.Bar.Items) {
-                log.Printf("origin, width %d %d\n", t.Origin, t.Width)
                 for i, s := range (t.Content) {
                         fv.Canvas.Data[idx + t.Origin + i].Symbol = s
                         fv.Canvas.Data[idx + t.Origin + i].Color  = t.Color
