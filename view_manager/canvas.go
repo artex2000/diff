@@ -9,6 +9,10 @@ func (vm *ViewManager) GetTextColor() uint32 {
         return (vm.Theme.DarkestBackground << 4) | vm.Theme.DarkForeground
 }
 
+func (vm *ViewManager) GetCurrentRowColor() uint32 {
+        return (vm.Theme.DarkBackground << 4) | vm.Theme.DarkForeground
+}
+
 func (vm *ViewManager) GetShadowTextColor() uint32 {
         return (vm.Theme.DarkestBackground << 4) | vm.Theme.DarkBackground
 }

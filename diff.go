@@ -6,6 +6,7 @@ import (
 	"github.com/Microsoft/go-winio"
         wt "github.com/artex2000/diff/winterm"
         vm "github.com/artex2000/diff/view_manager"
+        rv "github.com/artex2000/diff/view_manager/rootview"
         fv "github.com/artex2000/diff/view_manager/fileview"
 )
 
@@ -27,15 +28,16 @@ func main() {
         log.Printf("console effective window size %d:%d\n", s.Canvas.SizeX, s.Canvas.SizeY)
 
         root := &vm.ViewManager{}
+        root.Screen  = s
         root.SetColorTheme(nil)
         root.Init()
-        root.Running = true
-        root.Dirty   = false
-        root.Screen  = s
 
-        view := fv.FileView{} 
-        view.PositionType = vm.ViewPositionFullScreen
-        root.InsertView(&view)
+        rw := rv.RootView{}
+        rw.PositionType = vm.ViewPositionFullScreen
+        root.InsertView(&rw, nil)
+
+        root.Running = true
+
         ticker := time.Tick(time.Millisecond * 50)
 
         for root.Running {
@@ -52,6 +54,7 @@ func main() {
                         }
                 default:
                 }
+                CheckRequest(root)
                 if root.Dirty {
                         root.Screen.Flush()
                         root.Dirty = false
@@ -60,40 +63,18 @@ func main() {
         root.Screen.Close()
 }
 
-/*
-func XProcessInput(s *wt.Screen, e wt.EventRecord) {
-        log.Println("Got event")
-        if e.EventType == wt.KeyEvent && e.Key.KeyDown {
-                line := fmt.Sprintf("Key %x, Scan %x", e.Key.KeyCode, e.Key.ScanCode)
-                s.Canvas.WriteLine(line, 0, 0, 0x1F)
-                switch e.Key.KeyCode {
-                case 0x1b:
-                        //Running = false
-                case 0x20:
-                        //PrintNumbers(s)
-                        PrintColors(s)
+func CheckRequest(v *vm.ViewManager) {
+        for _, r := range (v.Request) {
+                switch r.(type) {
+                case vm.ViewRequestInsert:
+                        vi := r.(vm.ViewRequestInsert)
+                        switch vi.ViewType {
+                        case vm.InsertFileView:
+                                fw := fv.FileView{}
+                                fw.PositionType = vi.PositionType
+                                v.InsertView(&fw, vi.Config)
+                        }
                 }
         }
+        v.Request = v.Request[:0]
 }
-
-func PrintNumbers(s *wt.Screen) {
-        for i := 0; i < s.Canvas.SizeY; i++ {
-                line := fmt.Sprintf("%d      line", i)
-                s.Canvas.WriteLine(line, 0, i, 0x1f)
-        }
-}
-
-func PrintColors(s *wt.Screen) {
-        s.Canvas.Clear(wt.DARK_BASE_0)
-        for i := 0; i < 16; i++ {
-                line := fmt.Sprintf("Background is %x, Foreground is 0xF", i)
-                s.Canvas.WriteLine(line, 0, i, uint32(0xf | (i << 4)))
-        }
-
-        for i := 0; i < 16; i++ {
-                line := fmt.Sprintf("Background is 0, Foreground is %x", i)
-                s.Canvas.WriteLine(line, 0, i + 20 , uint32(i))
-        }
-}
-*/
-

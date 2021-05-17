@@ -200,7 +200,7 @@ func (fv *FileView) SetPosition(pos ViewPlacement) {
 
 func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
         log.Println("FileView init")
-        fv.BaseView.Init(pl, p, conf)
+        fv.BaseView.Init(pl, p, nil)
 
         root, ok := conf.(string)
         if !ok {

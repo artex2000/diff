@@ -2,8 +2,6 @@ package fileview
 
 const (
         CmdNone         = iota
-        CmdChord1               //first key press of 2-key or 3-key chord
-        CmdChord2               //second key press of 3-key chord
 
         CmdMoveUp
         CmdMoveDown
@@ -32,8 +30,6 @@ const (
 
 var CommandName = []string {
         "CmdNone",
-        "CmdChord1",
-        "CmdChord2",
 
         "CmdMoveUp",
         "CmdMoveDown",
@@ -70,6 +66,6 @@ func GetCommandId(name string) int {
                         return i
                 }
         }
-        return 0
+        return CmdNone
 }
 

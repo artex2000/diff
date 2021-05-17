@@ -43,19 +43,25 @@ const (
         AltPressed    = 0x00040000
 )
 
-// View keyboard input type
 const (
-        KeyInputRaw  = iota             //raw scan code + key code + key_id
-        KeyInputTranslate               //translate key_id to command
+        InsertFileView        = iota
+        InsertDiffView
 )
 
-// Translated key event command
-const (
-        KeyCommandRaw       = iota             //Decode following data as scan code + key code
-        KeyCommandInsert                       //Decode following data as uint16 rune 
-        KeyCommandExecute                      //Decode following data as CommandId
-)
+type ViewRequestInsert struct {
+        ViewType        int
+        PositionType    int
+        Config          interface{}
+}
 
+type FileViewConfig struct {
+        RootPath        string
+}
+
+type DiffViewConfig struct {
+        LeftPanePath        string
+        RightPanePath       string
+}
 
 // Child view origin and size
 type ViewPlacement struct {
@@ -92,6 +98,7 @@ type ViewManager struct {
         Theme     ColorTheme
         Keymaps   map[View]KeymapSet
         Input     *KeyState
+        Request   [] interface{}
 }
 
 type ColorTheme struct {

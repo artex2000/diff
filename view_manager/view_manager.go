@@ -3,6 +3,7 @@ package view_manager
 import (
         "log"
         wt "github.com/artex2000/diff/winterm"
+
 )
 
 func (vm *ViewManager) Init() {
@@ -10,10 +11,10 @@ func (vm *ViewManager) Init() {
         vm.Input = &KeyState{}
 }
 
-func (vm *ViewManager) InsertView(v View) {
+func (vm *ViewManager) InsertView(v View, conf interface{}) {
         pt := v.GetPositionType()
         pl := vm.GetViewPlacement(pt)
-        v.Init(pl, vm, "")
+        v.Init(pl, vm, conf)
 
         if !v.IsRawMode() {
                 normal, insert := v.GetKeyboardMap()
@@ -36,7 +37,6 @@ func (vm *ViewManager) InsertView(v View) {
 }
 
 func (vm *ViewManager) RemoveView() {
-
         if len(vm.Views) == 1 {
                 vm.Running = false
         }
@@ -200,6 +200,7 @@ func (vm *ViewManager) ProcessRawKeyEvent(raw KeyDataRaw) (KeyCommand, bool) {
                         return nil, false
                 }
         } else {
+                //Key up event processing
                 if vm.Input.ChordState == ChordStateFirst {
                         id := vm.Input.Key1 & 0xFFFF            //clear modifiers
                         if id == raw.KeyId {
