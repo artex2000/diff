@@ -3,6 +3,7 @@ package fileview
 import (
         "time"
         . "github.com/artex2000/diff/view_manager"
+        sb "github.com/artex2000/diff/view_manager/statusbar"
 )
 
 // Viewslot attributes to manage slot color
@@ -38,23 +39,6 @@ const (
         ViewDrawFilterInsert
         ViewDrawFilterExit
         ViewDrawStatusError
-)
-
-//Status bar alignment and width
-//we sort items within status bar using these two properties
-//fixed go first (on both ends)
-//next go flex (on both ends)
-//next goes span (should we have more than one?
-//since flex has undetermined size view should call SetContent before drawing
-const (
-        StatusBarLeft   = iota
-        StatusBarRight
-)
-
-const (
-        StatusBarFixed  = iota          //item has fixed width
-        StatusBarFlex                   //item width is content-dependent
-        StatusBarSpan                   //item takes all available space
 )
 
 const (
@@ -95,7 +79,7 @@ type FileView struct {
         CurrentPath     string          //Full path to current directory in the view
         Files           []*FileEntry
         LastPosition    []SlotPosition
-        Bar             *StatusBar
+        Bar             *sb.StatusBar
         Input           []uint16
 }
 
@@ -105,21 +89,5 @@ type FileEntry struct {
         ModTime time.Time       //used for sorting by time
         Dir     bool            //true if the file is a directory
         State   int             //For color control (see above defined constants)
-}
-
-type StatusBar struct {
-        Origin          int     //we need origin in case status bar shares last row with TabBar
-        Width           int
-        Items           []*StatusBarItem  //this will be sorted list. View maintains unsorted list
-}
-
-type StatusBarItem struct {
-        ItemId          int
-        Origin          int
-        Width           int
-        Alignment       int
-        WidthType       int
-        Color           uint32
-        Content         string
 }
 

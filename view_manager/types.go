@@ -79,7 +79,7 @@ type View interface {
         SetPosition(p ViewPlacement)
         SetVisible(v bool)
         Draw()
-        Init(pl ViewPlacement, pr *ViewManager, conf interface{})
+        Init(pl ViewPlacement, pr *ViewManager, conf interface{}) error
 }
 
 type ViewInfo struct {

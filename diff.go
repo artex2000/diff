@@ -8,6 +8,7 @@ import (
         vm "github.com/artex2000/diff/view_manager"
         rv "github.com/artex2000/diff/view_manager/rootview"
         fv "github.com/artex2000/diff/view_manager/fileview"
+        dv "github.com/artex2000/diff/view_manager/diffview"
 )
 
 
@@ -73,6 +74,10 @@ func CheckRequest(v *vm.ViewManager) {
                                 fw := fv.FileView{}
                                 fw.PositionType = vi.PositionType
                                 v.InsertView(&fw, vi.Config)
+                        case vm.InsertDiffView:
+                                dw := dv.DiffView{}
+                                dw.PositionType = vi.PositionType
+                                v.InsertView(&dw, vi.Config)
                         }
                 }
         }

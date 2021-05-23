@@ -14,7 +14,11 @@ func (vm *ViewManager) Init() {
 func (vm *ViewManager) InsertView(v View, conf interface{}) {
         pt := v.GetPositionType()
         pl := vm.GetViewPlacement(pt)
-        v.Init(pl, vm, conf)
+        err := v.Init(pl, vm, conf)
+        if err != nil {
+                log.Printf("View init failed - %v\n", err)
+                return
+        }
 
         if !v.IsRawMode() {
                 normal, insert := v.GetKeyboardMap()
@@ -29,16 +33,23 @@ func (vm *ViewManager) InsertView(v View, conf interface{}) {
                 }
                 vm.Keymaps[v] = keymap
         }
-        v.Draw()
         vm.Views = append (vm.Views, v)
         //Appended view will be last in array, so its index will be len (array) - 1
         vm.SetFocus(len (vm.Views) - 1)
+        v.Draw()
         vm.Dirty = true
 }
 
 func (vm *ViewManager) RemoveView() {
         if len(vm.Views) == 1 {
                 vm.Running = false
+        } else {
+                //We always remove last view in slice, because that's the one that has current focus
+                vm.Views = vm.Views[: len (vm.Views) - 1]
+                vm.SetFocus(len (vm.Views) - 1)
+                v := vm.Views[len (vm.Views) - 1]
+                v.Draw()
+                vm.Dirty = true
         }
 }
 
@@ -224,4 +235,8 @@ func (vm *ViewManager) ProcessRawKeyEvent(raw KeyDataRaw) (KeyCommand, bool) {
         }
         log.Printf("Unhandled keypress <%s>", KeyPressToString(full_id)) 
         return nil, false
+}
+
+func (vm *ViewManager) AddRequest(rq interface{}) {
+        vm.Request = append (vm.Request, rq)
 }

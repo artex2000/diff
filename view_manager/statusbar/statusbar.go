@@ -1,6 +1,41 @@
-package fileview
+package statusbar
 
 //import "log"
+
+//Status bar alignment and width
+//we sort items within status bar using these two properties
+//fixed go first (on both ends)
+//next go flex (on both ends)
+//next goes span (should we have more than one?
+//since flex has undetermined size view should call SetContent before drawing
+const (
+        StatusBarLeft   = iota
+        StatusBarRight
+)
+
+const (
+        StatusBarFixed  = iota          //item has fixed width
+        StatusBarFlex                   //item width is content-dependent
+        StatusBarHalf                   //item width is half of the bar size
+        StatusBarSpan                   //item takes all available space
+)
+
+type StatusBar struct {
+        Origin          int     //we need origin in case status bar shares last row with TabBar
+        Width           int
+        Items           []*StatusBarItem  //this will be sorted list. View maintains unsorted list
+}
+
+type StatusBarItem struct {
+        ItemId          int
+        Origin          int
+        Width           int
+        Alignment       int
+        WidthType       int
+        Color           uint32
+        Content         string
+}
+
 
 func (sb *StatusBar) Init(width int, items []*StatusBarItem) {
         sb.Width  = width
@@ -21,7 +56,9 @@ func (sb *StatusBar) Resize(width int) {
                 li := sb.Items[i]
                 if li.WidthType == StatusBarFlex {
                         li.Width = len (li.Content)
-                } else if li.WidthType == StatusBarSpan {
+                } else if li.Widthtype == StatusBarPart {
+                        li.Width = sb.Width / 2
+                } else if li.WidthType == StatusBarSpan || li.Alignment == StatusBarRight {
                         ls = i
                         break
                 }
@@ -33,6 +70,8 @@ func (sb *StatusBar) Resize(width int) {
                 ri := sb.Items[i]
                 if ri.WidthType == StatusBarFlex {
                         ri.Width = len (ri.Content)
+                } else if ri.Widthtype == StatusBarPart {
+                        ri.Width = sb.Width / 2
                 } else if ri.WidthType == StatusBarSpan {
                         rs = i
                         break

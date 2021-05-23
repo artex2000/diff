@@ -7,6 +7,7 @@ import (
         "unicode/utf16"
 //        "time"
         . "github.com/artex2000/diff/view_manager"
+        sb "github.com/artex2000/diff/view_manager/statusbar"
 )
 
 func (fv *FileView) ProcessTimerEvent() int {
@@ -198,15 +199,12 @@ func (fv *FileView) SetPosition(pos ViewPlacement) {
 }
 
 
-func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
+func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{}) error {
         log.Println("FileView init")
         fv.BaseView.Init(pl, p, nil)
 
-        root, ok := conf.(string)
-        if !ok {
-                root = ""
-        }
-        fv.CurrentPath = GetRootDirectory(root)
+        root := conf.(FileViewConfig)
+        fv.CurrentPath = GetRootDirectory(root.RootPath)
         fv.Columns       = 3
         fv.Rows          = fv.Canvas.SizeY - 1
         fv.Focus.X       = 0
@@ -221,14 +219,15 @@ func (fv *FileView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
         fv.InsertMode     = false
         fv.RawMode        = false
 
-        fv.Bar = &StatusBar{}
+        fv.Bar = &sb.StatusBar{}
         cl := fv.Parent.GetSelectTextColor()
-        sb := []*StatusBarItem {
-                { StatusBarInfo, 0, 0, StatusBarLeft, StatusBarSpan, cl, "" },
-                { StatusBarFilter, 0, 0, StatusBarRight, StatusBarFlex, cl, "" },
-                { StatusBarClock, 0, 5, StatusBarRight, StatusBarFixed, cl, "00:00" },
+        sb := []*sb.StatusBarItem {
+                { StatusBarInfo, 0, 0, sb.StatusBarLeft, sb.StatusBarSpan, cl, "" },
+                { StatusBarFilter, 0, 0, sb.StatusBarRight, sb.StatusBarFlex, cl, "" },
+                { StatusBarClock, 0, 5, sb.StatusBarRight, sb.StatusBarFixed, cl, "00:00" },
         }
         fv.Bar.Init(fv.Canvas.SizeX, sb)
+        return nil
 }
 
 func (fv *FileView) IsInsertMode() bool {

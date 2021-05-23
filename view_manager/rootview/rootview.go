@@ -10,13 +10,14 @@ type RootView struct {
         FocusLine       int
 }
 
-func  (rv *RootView) Init(pl ViewPlacement, p *ViewManager, conf interface{})  {
+func  (rv *RootView) Init(pl ViewPlacement, p *ViewManager, conf interface{}) error {
         log.Println("RootView init")
         rv.BaseView.Init(pl, p, nil)
         rv.InsertMode = false
         rv.RawMode    = false
 
         rv.FocusLine = 5
+        return nil
 }
 
 func (rv *RootView) IsInsertMode() bool {
@@ -125,8 +126,25 @@ func (rv *RootView) InsertFocusView() {
 }
 
 func (rv *RootView) InsertFileView() {
+        rq := ViewRequestInsert{}
+        rq.ViewType = InsertFileView
+        rq.PositionType = ViewPositionFullScreen
+
+        conf := FileViewConfig{}
+        conf.RootPath = "C:\\work\\Coffeelake"
+        rq.Config = conf
+        rv.Parent.AddRequest(rq)
 }
 
 func (rv *RootView) InsertDiffView() {
+        rq := ViewRequestInsert{}
+        rq.ViewType = InsertDiffView
+        rq.PositionType = ViewPositionFullScreen
+
+        conf := DiffViewConfig{}
+        conf.LeftPanePath  = "C:\\work\\playground\\left"
+        conf.RightPanePath = "C:\\work\\playground\\right"
+        rq.Config = conf
+        rv.Parent.AddRequest(rq)
 }
 
