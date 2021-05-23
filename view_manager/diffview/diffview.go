@@ -4,7 +4,9 @@ import (
         "log"
         "bytes"
         "strings"
+        "path/filepath"
         . "github.com/artex2000/diff/view_manager"
+        sb "github.com/artex2000/diff/view_manager/statusbar"
 )
 
 func  (dv *DiffView) Init(pl ViewPlacement, p *ViewManager, conf interface{}) error {
@@ -14,8 +16,10 @@ func  (dv *DiffView) Init(pl ViewPlacement, p *ViewManager, conf interface{}) er
         dv.RawMode    = false
 
         c := conf.(DiffViewConfig)
-        dv.LeftPanePath  = c.LeftPanePath
-        dv.RightPanePath = c.RightPanePath
+        ld, lf := filepath.Split(c.LeftPanePath)
+        rd, rf := filepath.Split(c.RightPanePath)
+        dv.LeftPaneRoot  = ld
+        dv.RightPaneRoot = rd
 
         err := dv.CheckPath()
         if err != nil {
@@ -27,37 +31,37 @@ func  (dv *DiffView) Init(pl ViewPlacement, p *ViewManager, conf interface{}) er
         dv.Rows      = dv.Canvas.SizeY - 1
 
         l := &DiffViewItem{}
-        l.Name     = dv.LeftPanePath
+        l.Name     = lf
         l.Dir      = true
         l.Expanded = false
         l.Indent   = 0
-        l.Distance = 0
-        err = l.Hash("")
+        l.Parent   = nil
+        err = l.Hash(dv.LeftPaneRoot)
         if err != nil {
                 return err
         }
 
         r := &DiffViewItem{}
-        r.Name     = dv.RightPanePath
+        r.Name     = rf
         r.Dir      = true
         r.Expanded = false
         r.Indent   = 0
-        r.Distance = 0
-        err = r.Hash("")
+        r.Parent   = nil
+        err = r.Hash(dv.RightPaneRoot)
         if err != nil {
                 return err
         }
 
         dv.LeftViewList  = append (dv.LeftViewList, l)
-        dv.RightViewList = append (dv.LeftViewList, r)
+        dv.RightViewList = append (dv.RightViewList, r)
 
         dv.Bar = &sb.StatusBar{}
-        cl := fv.Parent.GetSelectTextColor()
+        cl := dv.Parent.GetSelectTextColor()
         sb := []*sb.StatusBarItem {
-                { StatusBarLeft, 0, 0, sb.StatusBarLeft, sb.StatusBarHalf, cl, dv.LeftPanePath },
-                { StatusBarRight, 0, 0, sb.StatusBarRight, sb.StatusBarHalf, cl, dv.RightPanePath },
+                { StatusBarLeft, 0, 0, sb.StatusBarLeft, sb.StatusBarHalf, cl, c.LeftPanePath },
+                { StatusBarRight, 0, 0, sb.StatusBarRight, sb.StatusBarHalf, cl, c.RightPanePath },
         }
-        dv.Bar.Init(fv.Canvas.SizeX, sb)
+        dv.Bar.Init(dv.Canvas.SizeX, sb)
 
         return nil
 }
@@ -71,7 +75,7 @@ func (dv *DiffView) IsRawMode() bool {
 }
 
 func  (dv *DiffView) Draw()  {
-        dv.Canvas.Clear(dv.Parent.Theme.LightBackground)
+        dv.Canvas.Clear(dv.Parent.Theme.LightestBackground)
 
         dv.DrawViewList()
         dv.DrawSeparator()
@@ -154,7 +158,7 @@ func  (dv *DiffView) DrawViewList()  {
                 ri := dv.RightViewList[dv.BaseIndex + i]
 
                 cl := dv.Parent.GetMatchColor()
-                if bytes.Equal(li.HashValue, ri.HashValue) {
+                if !bytes.Equal(li.HashValue, ri.HashValue) {
                         cl = dv.Parent.GetDiffColor()
                 }
 
@@ -163,8 +167,19 @@ func  (dv *DiffView) DrawViewList()  {
                         prefix = strings.Repeat(" ", li.Indent)
                 }
 
+                if li.Dir {
+                        if li.Expanded {
+                                prefix += "(-)"
+                        } else {
+                                prefix += "(+)"
+                        }
+                }
+
+
                 ls := prefix + li.Name
                 rs := prefix + ri.Name
+
+                log.Printf("%s, %s : %s, %s\n", li.Name, ri.Name, ls, rs)
 
                 idx := l_offs + i * dv.Canvas.SizeX
                 for j, c := range (ls) {

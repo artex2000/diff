@@ -3,6 +3,7 @@ package diffview
 import (
         "time"
         . "github.com/artex2000/diff/view_manager"
+        sb "github.com/artex2000/diff/view_manager/statusbar"
 )
 
 const (
@@ -12,11 +13,12 @@ const (
 
 type DiffView struct {
         BaseView
-        LeftPanePath    string
-        RightPanePath   string
+        LeftPaneRoot    string
+        RightPaneRoot   string
         FocusLine       int
         BaseIndex       int
         Rows            int
+        Bar             *sb.StatusBar
         Filter          map[string]bool
         LeftViewList    []*DiffViewItem
         RightViewList   []*DiffViewItem

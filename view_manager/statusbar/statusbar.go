@@ -1,13 +1,7 @@
 package statusbar
 
-//import "log"
+import "log"
 
-//Status bar alignment and width
-//we sort items within status bar using these two properties
-//fixed go first (on both ends)
-//next go flex (on both ends)
-//next goes span (should we have more than one?
-//since flex has undetermined size view should call SetContent before drawing
 const (
         StatusBarLeft   = iota
         StatusBarRight
@@ -37,6 +31,7 @@ type StatusBarItem struct {
 }
 
 
+//we expect items to be in sorted order already
 func (sb *StatusBar) Init(width int, items []*StatusBarItem) {
         sb.Width  = width
         sb.Items  = items
@@ -44,52 +39,59 @@ func (sb *StatusBar) Init(width int, items []*StatusBarItem) {
 }
 
 func (sb *StatusBar) Resize(width int) {
+        spans := 0
         sb.Width = width
+        //these are running origins
         left, right := 0, width
-        ls, rs := 0, 0
 
-        //we do it in three passes
-        //on the first one we assign origin/width to left-aligned known width items
-        //(either fixed width or flex, for which width would be equal content length
-
-        for i := 0; i < len (sb.Items); i += 1 {
-                li := sb.Items[i]
-                if li.WidthType == StatusBarFlex {
-                        li.Width = len (li.Content)
-                } else if li.Widthtype == StatusBarPart {
-                        li.Width = sb.Width / 2
-                } else if li.WidthType == StatusBarSpan || li.Alignment == StatusBarRight {
-                        ls = i
-                        break
+        for _, t := range (sb.Items) {
+                switch t.WidthType {
+                case StatusBarFixed:
+                        if t.Alignment == StatusBarLeft {
+                                t.Origin = left
+                                left += t.Width
+                        } else {
+                                right -= t.Width
+                                t.Origin = right
+                        }
+                case StatusBarFlex:
+                        t.Width = len (t.Content)
+                        if t.Alignment == StatusBarLeft {
+                                t.Origin = left
+                                left += t.Width
+                        } else {
+                                right -= t.Width
+                                t.Origin = right
+                        }
+                case StatusBarHalf:
+                        t.Width = sb.Width / 2
+                        if t.Alignment == StatusBarLeft {
+                                t.Origin = left
+                                left += t.Width
+                        } else {
+                                right -= t.Width
+                                t.Origin = right
+                        }
+                case StatusBarSpan:
+                        spans += 1
                 }
-                li.Origin = left
-                left += li.Width
         }
 
-        for i := len (sb.Items) - 1; i > ls; i -= 1 {
-                ri := sb.Items[i]
-                if ri.WidthType == StatusBarFlex {
-                        ri.Width = len (ri.Content)
-                } else if ri.Widthtype == StatusBarPart {
-                        ri.Width = sb.Width / 2
-                } else if ri.WidthType == StatusBarSpan {
-                        rs = i
-                        break
+        if spans > 0 {
+                width_left := right - left
+                if width_left < 0 {
+                        log.Println("Malformed status bar")
+                } else {
+                        for _, t := range (sb.Items) {
+                                if t.WidthType == StatusBarSpan {
+                                        t.Origin = left
+                                        t.Width = width_left / spans
+                                        left += t.Width
+                                        width_left -= t.Width
+                                        spans -= 1
+                                }
+                        }
                 }
-                right -= ri.Width
-                ri.Origin = right
-        }
-
-        num_spans := rs - ls + 1
-        width_left := right - left
-
-        for i := ls; i <= rs; i += 1 {
-                li := sb.Items[i]
-                li.Origin = left
-                li.Width  = width_left / num_spans
-                left += li.Width
-                width_left -= li.Width
-                num_spans -= 1
         }
 }
 

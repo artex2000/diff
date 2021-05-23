@@ -38,10 +38,7 @@ func (di *DiffViewItem) Hash(root string) error {
         //we only calculate hash, and since we're here
         //we fill data members either with file data
         //or directory list
-        path := di.Name
-        if root != "" {
-                path = filepath.Join(root, di.Name)
-        }
+        path := filepath.Join(root, di.Name)
 
         var err error
         if di.Dir {
@@ -118,7 +115,7 @@ func (di *DiffViewItem) HashDir(path string) error {
         sort.Sort(DiffViewSorted(r))
 
         hash := sha1.New()
-        for i, t := range (r) {
+        for _, t := range (r) {
                 s := fmt.Sprintf("%s %d %v %v", t.Name, t.Size, t.Dir, t.Time)
                 io.WriteString(hash, s)
         }
@@ -130,13 +127,13 @@ func (di *DiffViewItem) HashDir(path string) error {
 }
 
 func (dv *DiffView) CheckPath() error {
-        left, err := filepath.Abs(dv.LeftPanePath)
+        left, err := filepath.Abs(dv.LeftPaneRoot)
         if err != nil {
                 log.Println(err)
                 return err
         }
 
-        right, err := filepath.Abs(dv.LeftPanePath)
+        right, err := filepath.Abs(dv.RightPaneRoot)
         if err != nil {
                 log.Println(err)
                 return err

@@ -211,13 +211,23 @@ func (fv *FileView) MoveIntoDir() (int, interface{}, error) {
         idx := fv.GetIndexFromSlot(fv.Focus.X, fv.Focus.Y)
         if fv.Files[idx].Name == ".." {
                 path := filepath.Dir(fv.CurrentPath)
-                last_idx := len (fv.LastPosition) - 1
-                pos := fv.LastPosition[last_idx]
-                fv.LastPosition = fv.LastPosition[: last_idx]
+                if len (fv.LastPosition) > 0 {
+                        last_idx := len (fv.LastPosition) - 1
+                        pos := fv.LastPosition[last_idx]
+                        fv.LastPosition = fv.LastPosition[: last_idx]
 
-                fv.Focus.X      = pos.X
-                fv.Focus.Y      = pos.Y
-                fv.BaseIndex    = pos.Base
+                        fv.Focus.X      = pos.X
+                        fv.Focus.Y      = pos.Y
+                        fv.BaseIndex    = pos.Base
+                } else {
+                        if err := OpenDir(path); err != nil {
+                                return ViewDrawNone, nil, err
+                        } else {
+                                fv.Focus.X      = 0
+                                fv.Focus.Y      = 0
+                                fv.BaseIndex    = 0
+                        }
+                }
                 fv.CurrentPath  = path
                 fv.FolderChange = true
         } else {

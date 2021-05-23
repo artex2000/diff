@@ -38,15 +38,15 @@ func (vm *ViewManager) GetErrorColor() uint32 {
 }
 
 func (vm *ViewManager) GetLightFocusColor() uint32 {
-        return (vm.Theme.LightestBackground << 4) | vm.Theme.DarkForeground
+        return (vm.Theme.LightBackground << 4) | vm.Theme.DarkForeground
 }
 
 func (vm *ViewManager) GetMatchColor() uint32 {
-        return (vm.Theme.LightBackground << 4) | vm.Theme.DarkestForeground
+        return (vm.Theme.LightestBackground << 4) | vm.Theme.DarkestForeground
 }
 
 func (vm *ViewManager) GetDiffColor() uint32 {
-        return (vm.Theme.LightBackground << 4) | vm.Theme.AccentRed
+        return (vm.Theme.LightestBackground << 4) | vm.Theme.AccentRed
 }
 
 
