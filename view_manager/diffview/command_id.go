@@ -6,6 +6,7 @@ const (
         CmdMoveUp
         CmdMoveDown
 
+        CmdHelp
         CmdEnter
         CmdQuit
 )

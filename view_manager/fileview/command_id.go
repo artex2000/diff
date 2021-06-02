@@ -15,6 +15,8 @@ const (
         CmdIncrementColumns
         CmdDecrementColumns
 
+        CmdMark
+        CmdCompare
         CmdEnter
 
         CmdFilter
@@ -43,6 +45,8 @@ var CommandName = []string {
         "CmdIncrementColumns",
         "CmdDecrementColumns",
 
+        "CmdMark",
+        "CmdCompare",
         "CmdEnter",
 
         "CmdFilter",

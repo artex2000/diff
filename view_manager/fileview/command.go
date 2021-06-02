@@ -3,6 +3,8 @@ package fileview
 import (
         "fmt"
         "path/filepath"
+        . "github.com/artex2000/diff/view_manager"
+        "github.com/artex2000/diff/slice_s"
 )
 
 func (fv *FileView) DecrementColumns() (int, interface{}, error) {
@@ -230,6 +232,10 @@ func (fv *FileView) MoveIntoDir() (int, interface{}, error) {
                 }
                 fv.CurrentPath  = path
                 fv.FolderChange = true
+                //all marks are lost after folder change
+                if len (fv.Marked) > 0 {
+                        fv.Marked = fv.Marked[:0]
+                }
         } else {
                 path := filepath.Join(fv.CurrentPath, fv.Files[idx].Name)
                 if err := OpenDir(path); err != nil {
@@ -243,8 +249,50 @@ func (fv *FileView) MoveIntoDir() (int, interface{}, error) {
                         fv.BaseIndex    = 0
                         fv.CurrentPath  = path
                         fv.FolderChange = true
+                        //all marks are lost after folder change
+                        if len (fv.Marked) > 0 {
+                                fv.Marked = fv.Marked[:0]
+                        }
                 }
         }
         return ViewDrawAll, nil, nil
 }
+
+func (fv *FileView) Mark() (int, interface{}, error) {
+        idx := fv.GetIndexFromSlot(fv.Focus.X, fv.Focus.Y)
+        path := filepath.Join(fv.CurrentPath, fv.Files[idx].Name)
+
+        if fv.Files[idx].State == FileEntryNormal {
+                fv.Files[idx].State = FileEntryMarked
+                fv.Marked = append (fv.Marked, path)
+        } else {
+                fv.Files[idx].State = FileEntryNormal
+                fv.Marked = slice_s.RemoveElement(fv.Marked, path).([]string)
+        }
+
+        return fv.MoveDown()
+}
+
+func (fv *FileView) Compare() (int, interface{}, error) {
+        if len (fv.Marked) < 2 {
+                err := fmt.Errorf("Nothing to compare")
+                return ViewDrawNone, nil, err
+        } else if len (fv.Marked) > 2 {
+                err := fmt.Errorf("Ambiguous selection to compare")
+                return ViewDrawNone, nil, err
+        } else {
+                rq := ViewRequestInsert{}
+                rq.ViewType = InsertDiffView
+                rq.PositionType = ViewPositionFullScreen
+
+                conf := DiffViewConfig{}
+                conf.LeftPanePath  = fv.Marked[0]
+                conf.RightPanePath = fv.Marked[1]
+                rq.Config = conf
+                fv.Parent.AddRequest(rq)
+        }
+        return ViewDrawNone, nil, nil
+}
+
+
 

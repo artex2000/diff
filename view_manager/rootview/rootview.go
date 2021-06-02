@@ -142,8 +142,12 @@ func (rv *RootView) InsertDiffView() {
         rq.PositionType = ViewPositionFullScreen
 
         conf := DiffViewConfig{}
-        conf.LeftPanePath  = "C:\\work\\playground\\left"
-        conf.RightPanePath = "C:\\work\\playground\\right"
+        /*
+        conf.LeftPanePath  = "C:\\work\\playground\\left\\setup_map_feature.txt"
+        conf.RightPanePath = "C:\\work\\playground\\right\\setup_map_feature.txt"
+        */
+        conf.LeftPanePath  = "C:\\work\\playground\\one_more.sdl"
+        conf.RightPanePath = "C:\\work\\playground\\one_less.sdl"
         rq.Config = conf
         rv.Parent.AddRequest(rq)
 }

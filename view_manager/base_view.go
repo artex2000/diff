@@ -5,16 +5,16 @@ import (
         wt "github.com/artex2000/diff/winterm"
 )
 
-func  (v *BaseView) SetPosition(pos ViewPlacement) {
-        if v.Position == pos {
+func  (v *BaseView) SetPosition(p ViewPlacement) {
+        if v.Position == p {
                 return 
         }
 
-        v.Position = pos
-        if (pos.SX != v.Canvas.SizeX) || (pos.SX != v.Canvas.SizeX) {
-                v.Canvas.SizeX = pos.SX
-                v.Canvas.SizeY = pos.SY
-                v.Canvas.Data = make([]wt.Cell, pos.SX * pos.SY)
+        v.Position = p
+        if (p.SX != v.Canvas.SizeX) || (p.SX != v.Canvas.SizeX) {
+                v.Canvas.SizeX = p.SX
+                v.Canvas.SizeY = p.SY
+                v.Canvas.Data = make([]wt.Cell, p.SX * p.SY)
         }
 }
 

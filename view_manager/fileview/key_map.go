@@ -26,6 +26,8 @@ var NormalModeMap = []UserKeyMap {
         { "<Enter>",     CmdEnter,       		"" },
         { "<Esc>",       CmdQuit,		        "" },
         { "</>",         CmdFilter,		        "" },
+        { "<Space>",     CmdMark,		        "" },
+        { "<C><O>",      CmdCompare,		        "" },
 }
 
 var InsertModeMap = []UserKeyMap {

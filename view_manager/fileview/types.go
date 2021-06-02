@@ -81,6 +81,7 @@ type FileView struct {
         LastPosition    []SlotPosition
         Bar             *sb.StatusBar
         Input           []uint16
+        Marked          []string
 }
 
 // Struct to describe file shown in the view

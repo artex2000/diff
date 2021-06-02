@@ -49,6 +49,9 @@ const (
         Key_F11
         Key_F12
 
+        //Space
+        Key_Space
+
         //Movement keys
         Key_Home
         Key_End
@@ -63,9 +66,6 @@ const (
         //are called Rune-Insert-Keys, because when the View is
         //in Insert mode keypress of key in this range will
         //produce one symbol to be put on the screen
-
-        //Space
-        Key_Space
 
         //Punctuation and math keys
         Key_BackTick
@@ -146,6 +146,7 @@ const (
 
 var KeyIdName = []string { 
         "Key_None",
+
         "Key_Esc",
         "Key_Enter",
         "Key_Tab",

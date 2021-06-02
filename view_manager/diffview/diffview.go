@@ -2,9 +2,6 @@ package diffview
 
 import (
         "log"
-        "bytes"
-        "strings"
-        "path/filepath"
         . "github.com/artex2000/diff/view_manager"
         sb "github.com/artex2000/diff/view_manager/statusbar"
 )
@@ -16,13 +13,9 @@ func  (dv *DiffView) Init(pl ViewPlacement, p *ViewManager, conf interface{}) er
         dv.RawMode    = false
 
         c := conf.(DiffViewConfig)
-        ld, lf := filepath.Split(c.LeftPanePath)
-        rd, rf := filepath.Split(c.RightPanePath)
-        dv.LeftPaneRoot  = ld
-        dv.RightPaneRoot = rd
-
-        err := dv.CheckPath()
+        err := dv.InitDiffTree(c.LeftPanePath, c.RightPanePath)
         if err != nil {
+                log.Printf("Can't init diff tree - %v\n", err)
                 return err
         }
 
@@ -30,30 +23,8 @@ func  (dv *DiffView) Init(pl ViewPlacement, p *ViewManager, conf interface{}) er
         dv.BaseIndex = 0
         dv.Rows      = dv.Canvas.SizeY - 1
 
-        l := &DiffViewItem{}
-        l.Name     = lf
-        l.Dir      = true
-        l.Expanded = false
-        l.Indent   = 0
-        l.Parent   = nil
-        err = l.Hash(dv.LeftPaneRoot)
-        if err != nil {
-                return err
-        }
-
-        r := &DiffViewItem{}
-        r.Name     = rf
-        r.Dir      = true
-        r.Expanded = false
-        r.Indent   = 0
-        r.Parent   = nil
-        err = r.Hash(dv.RightPaneRoot)
-        if err != nil {
-                return err
-        }
-
-        dv.LeftViewList  = append (dv.LeftViewList, l)
-        dv.RightViewList = append (dv.RightViewList, r)
+        dv.Content = nil
+        log.Printf("Diff %v - %v\n", c.LeftPanePath, c.RightPanePath)
 
         dv.Bar = &sb.StatusBar{}
         cl := dv.Parent.GetSelectTextColor()
@@ -74,46 +45,89 @@ func (dv *DiffView) IsRawMode() bool {
         return dv.RawMode
 }
 
-func  (dv *DiffView) Draw()  {
-        dv.Canvas.Clear(dv.Parent.Theme.LightestBackground)
+func (dv *DiffView) SetPosition(p ViewPlacement) {
+        if dv.Position == p {
+                return 
+        }
 
-        dv.DrawViewList()
-        dv.DrawSeparator()
-        dv.DrawStatusBar()
-
-        dv.BaseView.Draw()
+        dv.BaseView.SetPosition(p)
+        dv.Bar.Resize(dv.Canvas.SizeX)
+        dv.Rows = dv.Canvas.SizeY - 1
 }
 
 func  (dv *DiffView) ProcessKeyEvent(kc KeyCommand) int {
+        ret := ViewEventDiscard
+        var r int
+        var err error
+        var extra interface{}
+
         cmd := kc.(int)
         switch cmd {
         case CmdQuit:
                 return ViewEventClose
         case CmdMoveUp:
-                dv.MoveUp()
+                r, extra, err = dv.MoveUp()
         case CmdMoveDown:
-                dv.MoveDown()
+                r, extra, err = dv.MoveDown()
+        case CmdEnter:
+                r, extra, err = dv.ShowDiff()
         }
-        return ViewEventDiscard
+        
+        if err != nil {
+                //we don't expect errors here for now
+        } else {
+                switch r {
+                case ViewDrawAll:
+                        dv.Draw()
+                case ViewDrawFocusChange:
+                        dv.DrawFocusChange(extra.(int))
+                }
+        }
+        return ret
 }
 
 func  (dv *DiffView) ProcessTimerEvent() int {
         return ViewEventPass
 }
 
-func (dv *DiffView) MoveUp() {
+func  (dv *DiffView) Draw()  {
+        dv.Canvas.Clear(dv.Parent.Theme.LightestBackground)
+
+        dv.DrawContent()
+        dv.DrawSeparator()
+        dv.DrawStatusBar()
+
+        dv.BaseView.Draw()
 }
 
-func (dv *DiffView) MoveDown() {
-}
+func (dv *DiffView) DrawFocusChange(old int) {
+        cl := dv.Parent.GetMatchColor()
 
-func (dv *DiffView) DrawChangeFocus(old int) {
-        cl := dv.Parent.GetTextColor()
+        li := dv.Content.Left[dv.BaseIndex + old]
+        ri := dv.Content.Right[dv.BaseIndex + old]
+
+        if (li.Flags & DiffForceInsert) != 0 || (ri.Flags & DiffForceInsert) != 0 {
+                cl = dv.Parent.GetDiffInsertColor()
+        } else if (li.Flags & DiffNoMatch) != 0 || (ri.Flags & DiffNoMatch) != 0 { 
+                cl = dv.Parent.GetDiffColor()
+        }
+
         idx := old * dv.Canvas.SizeX
         for j := 0; j < dv.Canvas.SizeX; j++ {
                 dv.Canvas.Data[idx + j].Color  = cl
         }
-        cl = dv.Parent.GetCurrentRowColor()
+
+        cl = dv.Parent.GetFocusMatchColor()
+
+        li = dv.Content.Left[dv.BaseIndex + dv.FocusLine]
+        ri = dv.Content.Right[dv.BaseIndex + dv.FocusLine]
+
+        if (li.Flags & DiffForceInsert) != 0 || (ri.Flags & DiffForceInsert) != 0 {
+                cl = dv.Parent.GetFocusDiffInsertColor()
+        } else if (li.Flags & DiffNoMatch) != 0 || (ri.Flags & DiffNoMatch) != 0 { 
+                cl = dv.Parent.GetFocusDiffColor()
+        }
+
         idx = dv.FocusLine * dv.Canvas.SizeX
         for j := 0; j < dv.Canvas.SizeX; j++ {
                 dv.Canvas.Data[idx + j].Color  = cl
@@ -142,64 +156,85 @@ func  (dv *DiffView) DrawSeparator()  {
         dv.Canvas.DrawSingleVerticalLine(x, 0, dv.Rows, cl)
 }
 
-func  (dv *DiffView) DrawViewList()  {
+func  (dv *DiffView) DrawContent()  {
         l_offs := 0
         l_size := dv.Canvas.SizeX / 2
         r_offs := l_size + 1
-//        r_size := dv.Canvas.SizeX - l_size - 1
+        r_size := dv.Canvas.SizeX - l_size - 1
+
+        if dv.DrawMode == DrawModeFile {
+                li := dv.LeftFileTree[dv.BaseIndex + dv.FocusLine]
+                ri := dv.RightFileTree[dv.BaseIndex + dv.FocusLine]
+
+                left  := li.Data.([]string)
+                right := ri.Data.([]string)
+
+                dv.SetContentFile(left, right)
+                log.Printf("content %d - %d\n", len (dv.Content.Left), len (dv.Content.Right))
+        } else {
+                dv.SetContentTree()
+        }
+
+        ml  := dv.Parent.GetMatchColor()
+        dl  := dv.Parent.GetDiffColor()
+        ll  := dv.Parent.GetLazyDiffColor()
+
+        //draw left pane
 
         end := dv.Rows
-        if len (dv.LeftViewList) < end {
-                end = len (dv.LeftViewList) 
+        if end > len (dv.Content.Left) {
+                end = len (dv.Content.Left)
         }
 
         for i := 0; i < end; i += 1 {
-                li := dv.LeftViewList[dv.BaseIndex + i]
-                ri := dv.RightViewList[dv.BaseIndex + i]
+                s := dv.Content.Left[i]
 
-                cl := dv.Parent.GetMatchColor()
-                if !bytes.Equal(li.HashValue, ri.HashValue) {
-                        cl = dv.Parent.GetDiffColor()
-                }
-
-                prefix := ""
-                if li.Indent != 0 {
-                        prefix = strings.Repeat(" ", li.Indent)
-                }
-
-                if li.Dir {
-                        if li.Expanded {
-                                prefix += "(-)"
-                        } else {
-                                prefix += "(+)"
+                cl := ml
+                if (s.Flags & DiffNoMatch) != 0 {
+                        cl = dl
+                        if (s.Flags & DiffLazy) != 0 {
+                                cl = ll
                         }
                 }
 
-
-                ls := prefix + li.Name
-                rs := prefix + ri.Name
-
-                log.Printf("%s, %s : %s, %s\n", li.Name, ri.Name, ls, rs)
-
                 idx := l_offs + i * dv.Canvas.SizeX
-                for j, c := range (ls) {
-                        dv.Canvas.Data[idx + j].Symbol = c
+                cut := len (s.Data)
+                if cut > l_size {
+                        cut = l_size
+                }
+
+                for j := 0; j < cut; j += 1 {
+                        dv.Canvas.Data[idx + j].Symbol = rune(s.Data[j])
                         dv.Canvas.Data[idx + j].Color  = cl
                 }
 
+                s = dv.Content.Right[i]
                 idx = r_offs + i * dv.Canvas.SizeX
-                for j, c := range (rs) {
-                        dv.Canvas.Data[idx + j].Symbol = c
+                cut = len (s.Data)
+                if cut > r_size {
+                        cut = r_size
+                }
+                for j := 0; j < cut; j += 1 {
+                        dv.Canvas.Data[idx + j].Symbol = rune(s.Data[j])
                         dv.Canvas.Data[idx + j].Color  = cl
                 }
         }
 
-        cl  := dv.Parent.GetLightFocusColor()
+        cl := dv.Parent.GetFocusMatchColor()
+
+        li := dv.Content.Left[dv.BaseIndex + dv.FocusLine]
+        ri := dv.Content.Right[dv.BaseIndex + dv.FocusLine]
+
+        if (li.Flags & DiffForceInsert) != 0 || (ri.Flags & DiffForceInsert) != 0 {
+                cl = dv.Parent.GetFocusDiffInsertColor()
+        } else if (li.Flags & DiffNoMatch) != 0 || (ri.Flags & DiffNoMatch) != 0 { 
+                cl = dv.Parent.GetFocusDiffColor()
+        }
+
         idx := dv.FocusLine * dv.Canvas.SizeX
         for i := 0; i < dv.Canvas.SizeX; i += 1 {
                 dv.Canvas.Data[idx + i].Color  = cl
         }
 }
-
 
 

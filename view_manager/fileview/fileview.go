@@ -58,6 +58,10 @@ func (fv *FileView) ProcessKeyEvent(kc KeyCommand) int {
                 r, extra, err = fv.MoveLeft()
         case CmdMoveRight:
                 r, extra, err = fv.MoveRight()
+        case CmdMark:
+                r, extra, err = fv.Mark()
+        case CmdCompare:
+                r, extra, err = fv.Compare()
         case CmdEnter:
                 idx := fv.GetIndexFromSlot(fv.Focus.X, fv.Focus.Y)
                 if fv.Files[idx].Dir {
@@ -290,7 +294,6 @@ func (fv *FileView) DrawStatusBar() {
                 }
         }
 }
-
 
 
 func (fv *FileView) DrawFocusSlot(OldX, OldY int, cm []ColumnMetrics, set bool) {

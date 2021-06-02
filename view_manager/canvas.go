@@ -42,11 +42,31 @@ func (vm *ViewManager) GetLightFocusColor() uint32 {
 }
 
 func (vm *ViewManager) GetMatchColor() uint32 {
-        return (vm.Theme.LightestBackground << 4) | vm.Theme.DarkestForeground
+        return (vm.Theme.LightestBackground << 4) | vm.Theme.DarkestBackground
 }
 
 func (vm *ViewManager) GetDiffColor() uint32 {
         return (vm.Theme.LightestBackground << 4) | vm.Theme.AccentRed
+}
+
+func (vm *ViewManager) GetLazyDiffColor() uint32 {
+        return (vm.Theme.LightestBackground << 4) | vm.Theme.AccentMagenta
+}
+
+func (vm *ViewManager) GetDiffInsertColor() uint32 {
+        return (vm.Theme.LightestBackground << 4) | vm.Theme.AccentMagenta
+}
+
+func (vm *ViewManager) GetFocusMatchColor() uint32 {
+        return (vm.Theme.LightBackground << 4) | vm.Theme.DarkestBackground
+}
+
+func (vm *ViewManager) GetFocusDiffColor() uint32 {
+        return (vm.Theme.LightBackground << 4) | vm.Theme.AccentRed
+}
+
+func (vm *ViewManager) GetFocusDiffInsertColor() uint32 {
+        return (vm.Theme.LightBackground << 4) | vm.Theme.AccentMagenta
 }
 
 

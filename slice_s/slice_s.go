@@ -109,3 +109,37 @@ func InsertRangeAtIndex(s interface{}, index int, t interface{}) interface{} {
         return out.Interface()
 }
 
+func RemoveElement(s interface{}, v interface{}) interface{} {
+        if reflect.TypeOf(s).Kind() != reflect.Slice {
+                log.Println("Input is not a slice type")
+                return nil
+        }
+
+        in   := reflect.ValueOf(s)
+        in_l := in.Len()
+        in_c := in.Cap()
+        in_t := reflect.TypeOf(s).Elem()
+
+        if reflect.TypeOf(v) != in_t {
+                log.Println("Slice and Element are different types")
+                return nil
+        }
+
+        out := reflect.MakeSlice(reflect.SliceOf(in_t), in_l - 1, in_c)
+        for i := 0; i < in_l; i += 1 {
+                sv := in.Index(i).Interface()
+                if v == sv {
+                        if i == 0 {
+                                reflect.Copy(out, in.Slice(1, in_l))
+                        } else if i == in_l - 1 {
+                                reflect.Copy(out, in.Slice(0, in_l - 1))
+                        } else {
+                                reflect.Copy(out, in.Slice(0, i))
+                                reflect.Copy(out.Slice(i, in_l - 1), in.Slice(i + 1, in_l))
+                        }
+                        return out.Interface()
+                }
+        }
+        return s
+}
+

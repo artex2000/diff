@@ -11,27 +11,7 @@ import (
         "path/filepath"
 )
 
-type DiffViewSorted []*DiffViewItem
-
-func (e DiffViewSorted) Len() int {
-        return len(e)
-}
-
-func (e DiffViewSorted) Swap(i, j int) {
-        e[i], e[j] = e[j], e[i]
-}
-
-func (e DiffViewSorted) Less(i, j int) bool {
-        if e[i].Dir && !e[j].Dir {
-                return true
-        } else if !e[i].Dir && e[j].Dir {
-                return false
-        } else {
-                return strings.ToLower(e[i].Name) < strings.ToLower(e[j].Name)
-        }
-}
-
-func (di *DiffViewItem) Hash(root string) error {
+func (di *DiffTreeItem) Hash(root string) error {
         //at this point di members 
         //Name, Size, Dir, Time, Indent, Distance
         // are set.
@@ -54,7 +34,7 @@ func (di *DiffViewItem) Hash(root string) error {
         return nil
 }
 
-func (di *DiffViewItem) HashFile(path string) error {
+func (di *DiffTreeItem) HashFile(path string) error {
         f, err := os.Open(path)
         if err != nil {
                 log.Println(err)
@@ -79,12 +59,21 @@ func (di *DiffViewItem) HashFile(path string) error {
         hash := sha1.New()
 
         di.HashValue = hash.Sum(buf)
-        di.Data = buf
+
+        //convert file into set of strings
+        //TODO: add ability to distinguish between binary and text files
+        s := strings.Split(string(buf), "\n")
+        for i := 0; i < len (s); i += 1 {
+                s[i] = strings.TrimRight(s[i], "\t\r\n ") 
+                s[i] = strings.Replace(s[i], "\t", "        ", -1)
+        }
+
+        di.Data = s
 
         return nil
 }
 
-func (di *DiffViewItem) HashDir(path string) error {
+func (di *DiffTreeItem) HashDir(path string) error {
         f, err := os.Open(path)
         if err != nil {
                 return err
@@ -97,9 +86,9 @@ func (di *DiffViewItem) HashDir(path string) error {
                 return err
         }
 
-        r := make([]*DiffViewItem, 0, len(files) + 1)       //extra entry for parent subdirectory
+        r := make([]*DiffTreeItem, 0, len(files))
         for _, file := range files {
-                e := DiffViewItem{}
+                e := DiffTreeItem{}
                 e.Name   = file.Name()
                 e.Parent = di
                 e.Size   = file.Size()
@@ -112,7 +101,7 @@ func (di *DiffViewItem) HashDir(path string) error {
                 r = append(r, &e)
         }
 
-        sort.Sort(DiffViewSorted(r))
+        sort.Sort(DiffTreeSlice(r))
 
         hash := sha1.New()
         for _, t := range (r) {
@@ -126,49 +115,67 @@ func (di *DiffViewItem) HashDir(path string) error {
         return nil
 }
 
-func (dv *DiffView) CheckPath() error {
-        left, err := filepath.Abs(dv.LeftPaneRoot)
+func (dv *DiffView) InitDiffTree(leftPath, rightPath string) error {
+        left, err := filepath.Abs(leftPath)
         if err != nil {
-                log.Println(err)
                 return err
         }
 
-        right, err := filepath.Abs(dv.RightPaneRoot)
+        right, err := filepath.Abs(rightPath)
         if err != nil {
-                log.Println(err)
                 return err
         }
 
         lf, err := os.Stat(left)
         if err != nil {
-                log.Println(err)
                 return err
         }
 
         rf, err := os.Stat(right)
         if err != nil {
-                log.Println(err)
                 return err
         }
 
-        if !lf.IsDir() || !rf.IsDir() {
-                err = fmt.Errorf("File diffview is not supported yet")
-                log.Println(err)
+        if lf.IsDir() != rf.IsDir() {
+                err = fmt.Errorf("Can't compare file to directory")
                 return err
         }
 
-        l, err := os.Open(left)
+        l_dir, _ := filepath.Split(left)
+        r_dir, _ := filepath.Split(right)
+        dv.LeftPaneRoot  = l_dir
+        dv.RightPaneRoot = r_dir
+
+        l := &DiffTreeItem{}
+        l.Name     = lf.Name()
+        l.Dir      = lf.IsDir()
+        l.Expanded = false
+        l.Indent   = 0
+        l.Parent   = nil
+        err = l.Hash(dv.LeftPaneRoot)
         if err != nil {
-                log.Println(err)
                 return err
         }
-        l.Close()
 
-        r, err := os.Open(right)
+        r := &DiffTreeItem{}
+        r.Name     = rf.Name()
+        r.Dir      = rf.IsDir()
+        r.Expanded = false
+        r.Indent   = 0
+        r.Parent   = nil
+        err = r.Hash(dv.RightPaneRoot)
         if err != nil {
-                log.Println(err)
                 return err
         }
-        r.Close()
+
+        dv.LeftFileTree  = append (dv.LeftFileTree, l)
+        dv.RightFileTree = append (dv.RightFileTree, r)
+
+        if lf.IsDir() {
+                dv.DrawMode = DrawModeTree
+        } else {
+                dv.DrawMode = DrawModeFile
+        }
+
         return nil
 }

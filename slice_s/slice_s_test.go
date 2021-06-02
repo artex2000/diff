@@ -81,3 +81,14 @@ func TestInsertRangeAtIndex(t *testing.T) {
         }
 }
 
+func TestRemoveElement(t *testing.T) {
+        input := []byte{ 1, 2, 3, 4, 5 }
+
+        t0 := []byte{ 1, 2, 4, 5 }
+
+        out0 := RemoveElement(input, byte(3)).([]byte)
+        if !bytes.Equal(out0, t0) {
+                t.Errorf("Remove element is incorrect, got: %v, want %v", out0, t0)
+        }
+}
+

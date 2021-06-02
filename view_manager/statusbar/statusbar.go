@@ -64,7 +64,7 @@ func (sb *StatusBar) Resize(width int) {
                                 t.Origin = right
                         }
                 case StatusBarHalf:
-                        t.Width = sb.Width / 2
+                        t.Width = (sb.Width - 1) / 2
                         if t.Alignment == StatusBarLeft {
                                 t.Origin = left
                                 left += t.Width
@@ -93,6 +93,7 @@ func (sb *StatusBar) Resize(width int) {
                         }
                 }
         }
+        sb.TrimContent()
 }
 
 func (sb *StatusBar) SetContent(id int, data string) {
@@ -116,4 +117,14 @@ func (sb *StatusBar) SetColor(id int, color uint32) {
                 }
         }
 }
+
+func (sb *StatusBar) TrimContent() {
+        for _, t := range (sb.Items) {
+                if len (t.Content) > t.Width {
+                        t.Content = t.Content[0:t.Width - 3]
+                        t.Content += "..."
+                }
+        }
+}
+
                 

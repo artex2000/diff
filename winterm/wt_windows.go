@@ -82,6 +82,10 @@ func (this *console_screen_buffer_info) uptr() uintptr {
 	return uintptr(unsafe.Pointer(this))
 }
 
+func (this *console_cursor_info) uptr() uintptr {
+	return uintptr(unsafe.Pointer(this))
+}
+
 func (this coord) uptr() uintptr {
 	return uintptr(*(*int32)(unsafe.Pointer(&this)))
 }
@@ -260,6 +264,25 @@ func winGetConsoleMode(h uintptr) (dword, error) {
         }
 }
 
+func winGetCursorInfo(h uintptr) (*console_cursor_info, error) {
+        var s console_cursor_info
+        r, _, err := get_console_cursor_info.Call(h, uintptr(unsafe.Pointer(&s))) 
+        if r == 0 { //call return "false"
+                return nil, err
+        } else {
+                return &s, nil
+        }
+}
+
+func winSetCursorInfo(h uintptr, info *console_cursor_info) error {
+        r, _, err := set_console_cursor_info.Call(h, uintptr(unsafe.Pointer(info))) 
+        if r == 0 { //call return "false"
+                return err
+        } else {
+                return nil
+        }
+}
+
 func winGetLargestConsoleWindowSize(h uintptr) (int, int, error) {
         r, _, err := get_largest_console_window_size.Call(h)
         if r == 0 {
@@ -289,6 +312,7 @@ func winFlushConsoleInputBuffer(h uintptr) error {
         }
 }
 
+/*
 func GetScreenInfo() (*WtWindow, error) {
         h, err := winGetOutputHandle()
         if h == WIN_INVALID_HANDLE { //invalid handle
@@ -303,6 +327,8 @@ func GetScreenInfo() (*WtWindow, error) {
                           s.window.left, s.window.right,
                           s.window.top, s.window.bottom}, nil
 }
+*/
+
 
 func initOutput(s *Screen) error {
         h, err := winGetOutputHandle()
@@ -346,6 +372,19 @@ func initOutput(s *Screen) error {
         s.Canvas.SizeY = sy
         s.Canvas.Data  = make([]Cell, sx * sy)
         s.buff         = make([]char_info, sx * sy)
+
+
+        //Hide cursor
+        cursor, err := winGetCursorInfo(h)
+        if err != nil {
+                return err
+        }
+
+        cursor.visible = 0
+        err = winSetCursorInfo(h, cursor)
+        if err != nil {
+                return err
+        }
 
         return nil
 }
