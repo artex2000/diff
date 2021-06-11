@@ -5,6 +5,10 @@ const (
 
         CmdMoveUp
         CmdMoveDown
+        CmdMovePageUp
+        CmdMovePageDown
+        CmdMoveTop
+        CmdMoveBottom
 
         CmdHelp
         CmdEnter
@@ -16,6 +20,10 @@ var CommandName = []string {
 
         "CmdMoveUp",
         "CmdMoveDown",
+        "CmdMovePageUp",
+        "CmdMovePageDown",
+        "CmdMoveTop",
+        "CmdMoveBottom",
 
         "CmdHelp",
         "CmdEnter",

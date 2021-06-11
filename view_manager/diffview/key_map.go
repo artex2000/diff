@@ -15,6 +15,10 @@ import (
 var NormalModeMap = []UserKeyMap {
         { "<J>",        CmdMoveDown, "" },
         { "<K>",        CmdMoveUp,   "" },
+        { "<S-J>",      CmdMovePageDown, "" },
+        { "<S-K>",      CmdMovePageUp,   "" },
+        { "<G><G>",     CmdMoveTop,    "" },
+        { "<S-G>",      CmdMoveBottom,    "" },
         { "<Enter>",    CmdEnter,    "" },
         { "<Esc>",      CmdQuit,     "" },
 }

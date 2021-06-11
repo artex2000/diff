@@ -12,30 +12,22 @@ const (
 )
 
 const (
-        DrawModeTree    = iota
-        DrawModeFile
-)
-
-const (
         ViewDrawNone     = iota
         ViewDrawAll
         ViewDrawFocusChange
 )
 
 const (
-        DiffTypeMatch    = iota
-        DiffTypeLeftInsert
-        DiffTypeRightInsert
-        DiffTypeSubstitute
-        DiffTypeLazyLeftInsert
-        DiffTypeLazyRightInsert
-        DiffTypeLazySubstitute
+        TreeDiff        = iota
+        StringDiff
+        HexDiff
 )
 
 const (
-        DiffNoMatch         = 0x0002
-        DiffForceInsert     = 0x0004
-        DiffLazy            = 0x0008
+        DiffMatch    = iota
+        DiffLeftInsert
+        DiffRightInsert
+        DiffSubstitute
 )
 
 //Base Diff View data
@@ -46,87 +38,82 @@ type DiffView struct {
         FocusLine       int
         BaseIndex       int
         Rows            int
-        DrawMode        int
         Bar             *sb.StatusBar
         Filter          map[string]bool
-        LeftFileTree    []*DiffTreeItem
-        RightFileTree   []*DiffTreeItem
-        Content         *DiffData
+        LeftTree        *DiffTree
+        RightTree       *DiffTree
+        Content         *DiffLines
 }
 
 //This is file/directory item that is part of DiffTree
-type DiffTreeItem struct {
+type DiffTree struct {
         Name            string
-        Parent          *DiffTreeItem
+        Parent          *DiffTree
         Size            int64
         Dir             bool
         Expanded        bool
         Time            time.Time
         HashValue       []byte
         Indent          int     //nested sub-folder level
+        //This will be list of file names for directory or list of strings for file
+        //TODO Add HexDiff
         Data            interface{}
 }
 
 //all arrays are the same size, with empty strings added where needed
 //We use this data for actual display, so we can scroll these lines without overhead
-type DiffData struct {
-        Left            []DiffDataItem
-        Right           []DiffDataItem
+type DiffLines struct {
+        Left            []DiffLine
+        Right           []DiffLine
+        Type            int
 }
 
 //This holds value to display for one string on one of the panels
-type DiffDataItem struct {
+type DiffLine struct {
         Data    string
-        Flags   int
+        Type    int
 }
 
 //We use it to track nested directories while filling DiffData arrays
-type DiffTreeStack struct {
-        Left        []*DiffTreeItem
-        Right       []*DiffTreeItem
+type TreeStack struct {
+        Left        []*DiffTree
+        Right       []*DiffTree
         LeftIndex   int
         RightIndex int
-}
-
-//String diff is used for show differences between text files
-type StringDiff struct {
-        DiffType        int
-        LeftStartIndex  int     //lower bound included
-        LeftNextIndex   int     //uppoer bound excluded
-        RightStartIndex int
-        RightNextIndex  int
 }
 
 //This holds string range that requires deep comparison
 //We get this after we trim top and bottom matching strings from the file
 type DiffWindow struct {
-        LeftLowerBound          int
-        LeftUpperBound          int
-        RightLowerBound         int
-        RightUpperBound         int
+        LeftStart    int
+        LeftEnd      int
+        RightStart   int
+        RightEnd     int
+}
+
+//String diff is used for show differences between text files
+type DiffChunk struct {
+        Type        int
+        Window      DiffWindow
 }
 
 //Score shows how many subsequent matching lines are in range
 //Index is ScoreMatrix element index of the last matching line
 //But because we have apron in ScoreMatrix (extra first row and column)
 //Index will point to last_line + 1, which is what we want
-type DiffScore struct {
+type Score struct {
         Index           int
-        Score           uint16
+        Value           uint16
 }
 
 //Deep comparison engine internal data
 type DiffProcessor struct {
         Left            []string
         Right           []string
-        //We probably don't need the matrix per-ce once we done with the scoring
-        //and have DiffScore array
-        Matrix          []uint16                //score matrix
-        X,Y             int                     //score matrix origin (index or top diff)
-        SX, SY          int                     //score matrix size
-        Scored          bool                    //if score matrix filled already
-        Result          []StringDiff
-        Jobs            []DiffWindow            //diff windows to process
-        Select          []DiffWindow            //choice between two concurring matches
-        Scores          []DiffScore
+        //This is match chunks that cover matching top and bottom lines, so we don't have 
+        //to run them through full diff processor
+        Head, Tail      DiffChunk
+        Result          []DiffChunk
+        Scores          []Score
+        Completed       bool
 }

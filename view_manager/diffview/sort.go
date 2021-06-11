@@ -6,50 +6,25 @@ import (
 )
 
 //synthetic type to implement slice sorting
-type StringDiffSlice []StringDiff
+type ScoreSlice []Score
 
-func (e StringDiffSlice) Len() int {
+func (e ScoreSlice) Len() int {
         return len(e)
 }
 
-func (e StringDiffSlice) Swap(i, j int) {
+func (e ScoreSlice) Swap(i, j int) {
         e[i], e[j] = e[j], e[i]
 }
 
-func (e StringDiffSlice) Less(i, j int) bool {
-        if e[i].LeftStartIndex != -1 && e[j].LeftStartIndex != -1 {
-                return e[i].LeftStartIndex < e[j].LeftStartIndex
-        } else if e[i].RightStartIndex != -1 && e[j].RightStartIndex != -1 {
-                return e[i].RightStartIndex < e[j].RightStartIndex
-        } else if e[i].LeftStartIndex == -1 && e[j].LeftStartIndex == -1 { 
-                return e[i].RightStartIndex < e[j].RightStartIndex
-        } else if e[i].RightStartIndex == -1 && e[j].RightStartIndex == -1 {
-                return e[i].LeftStartIndex < e[j].LeftStartIndex
-        } else if e[i].LeftStartIndex == -1 {
-                return true
-        }
-        return false
-}
-
-type DiffScoreSlice []DiffScore
-
-func (e DiffScoreSlice) Len() int {
-        return len(e)
-}
-
-func (e DiffScoreSlice) Swap(i, j int) {
-        e[i], e[j] = e[j], e[i]
-}
-
-func (e DiffScoreSlice) Less(i, j int) bool {
-        if e[i].Score != e[j].Score {
-                return e[i].Score < e[j].Score
+func (e ScoreSlice) Less(i, j int) bool {
+        if e[i].Value != e[j].Value {
+                return e[i].Value < e[j].Value
         } else {
                 return e[i].Index < e[j].Index
         }
 }
 
-type DiffTreeSlice []*DiffTreeItem
+type DiffTreeSlice []*DiffTree
 
 func (e DiffTreeSlice) Len() int {
         return len(e)

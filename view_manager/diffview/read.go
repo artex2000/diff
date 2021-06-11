@@ -11,7 +11,7 @@ import (
         "path/filepath"
 )
 
-func (di *DiffTreeItem) Hash(root string) error {
+func (di *DiffTree) Hash(root string) error {
         //at this point di members 
         //Name, Size, Dir, Time, Indent, Distance
         // are set.
@@ -34,7 +34,7 @@ func (di *DiffTreeItem) Hash(root string) error {
         return nil
 }
 
-func (di *DiffTreeItem) HashFile(path string) error {
+func (di *DiffTree) HashFile(path string) error {
         f, err := os.Open(path)
         if err != nil {
                 log.Println(err)
@@ -73,7 +73,7 @@ func (di *DiffTreeItem) HashFile(path string) error {
         return nil
 }
 
-func (di *DiffTreeItem) HashDir(path string) error {
+func (di *DiffTree) HashDir(path string) error {
         f, err := os.Open(path)
         if err != nil {
                 return err
@@ -86,9 +86,9 @@ func (di *DiffTreeItem) HashDir(path string) error {
                 return err
         }
 
-        r := make([]*DiffTreeItem, 0, len(files))
+        r := make([]*DiffTree, 0, len(files))
         for _, file := range files {
-                e := DiffTreeItem{}
+                e := DiffTree{}
                 e.Name   = file.Name()
                 e.Parent = di
                 e.Size   = file.Size()
@@ -146,7 +146,7 @@ func (dv *DiffView) InitDiffTree(leftPath, rightPath string) error {
         dv.LeftPaneRoot  = l_dir
         dv.RightPaneRoot = r_dir
 
-        l := &DiffTreeItem{}
+        l := &DiffTree{}
         l.Name     = lf.Name()
         l.Dir      = lf.IsDir()
         l.Expanded = false
@@ -157,7 +157,7 @@ func (dv *DiffView) InitDiffTree(leftPath, rightPath string) error {
                 return err
         }
 
-        r := &DiffTreeItem{}
+        r := &DiffTree{}
         r.Name     = rf.Name()
         r.Dir      = rf.IsDir()
         r.Expanded = false
@@ -168,13 +168,13 @@ func (dv *DiffView) InitDiffTree(leftPath, rightPath string) error {
                 return err
         }
 
-        dv.LeftFileTree  = append (dv.LeftFileTree, l)
-        dv.RightFileTree = append (dv.RightFileTree, r)
+        dv.LeftTree  = l
+        dv.RightTree = r
 
-        if lf.IsDir() {
-                dv.DrawMode = DrawModeTree
+        if l.Dir {
+                dv.SetContentTree()
         } else {
-                dv.DrawMode = DrawModeFile
+                dv.SetContentFile(l.Data.([]string), r.Data.([]string))
         }
 
         return nil

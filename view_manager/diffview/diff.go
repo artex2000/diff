@@ -3,20 +3,20 @@ package diffview
 import (
         "log"
         "sort"
+        "time"
         "bytes"
         "strings"
 )
 
-func GetStringDiff(left, right []string) []StringDiff {
-        var r []StringDiff
+func GetStringDiff(left, right []string) *DiffProcessor {
 
         left_lower_bound := 0;
         left_upper_bound := len (left)
         right_lower_bound := 0;
         right_upper_bound := len (right)
 
-        top_diff    := false
-        bottom_diff := false
+        log.Printf("Left: %d lines\n", left_upper_bound)
+        log.Printf("Right: %d lines\n", right_upper_bound)
 
         top_match := 0
         bottom_match := 0
@@ -25,6 +25,9 @@ func GetStringDiff(left, right []string) []StringDiff {
         if smaller > len (right) {
                 smaller = len (right)
         }
+
+        top_diff    := false
+        bottom_diff := false
 
         for idx := 0; !top_diff || !bottom_diff; idx += 1 {
                 if !top_diff {
@@ -43,419 +46,397 @@ func GetStringDiff(left, right []string) []StringDiff {
                                 bottom_diff = true
                         }
                 }
-
-                if top_match + bottom_match >= smaller {
-                        //we have all entries sorted here
-                        //we exhausted smaller range - we're done here
-                        if top_match > 0 {
-                                //we have some matching lines, let's create Matching entry
-                                e := StringDiff{}
-                                e.DiffType = DiffTypeMatch
-                                e.LeftStartIndex  = left_lower_bound
-                                e.LeftNextIndex   = left_lower_bound + top_match
-                                e.RightStartIndex = right_lower_bound
-                                e.RightNextIndex  = right_lower_bound + top_match
-                                r = append (r, e)
-                        }
-
-                        if len (left) > len (right) {
-                                //Insert on the left side
-                                e := StringDiff{}
-                                e.DiffType = DiffTypeLeftInsert
-                                e.LeftStartIndex  = left_lower_bound + top_match
-                                e.LeftNextIndex   = left_upper_bound - bottom_match
-                                e.RightStartIndex = -1
-                                e.RightNextIndex  = -1
-                                r = append (r, e)
-                        } else {
-                                //Insert on the right side
-                                e := StringDiff{}
-                                e.DiffType = DiffTypeRightInsert
-                                e.LeftStartIndex  = -1
-                                e.LeftNextIndex   = -1
-                                e.RightStartIndex = right_lower_bound + top_match
-                                e.RightNextIndex  = right_upper_bound - bottom_match
-                                r = append (r, e)
-                        }
-
-                        if bottom_match > 0 {
-                                e := StringDiff{}
-                                e.DiffType = DiffTypeMatch
-                                e.LeftStartIndex  = left_upper_bound - bottom_match
-                                e.LeftNextIndex   = left_upper_bound
-                                e.RightStartIndex = right_upper_bound - bottom_match
-                                e.RightNextIndex  = right_upper_bound
-                                r = append (r, e)
-                        }
-
-                        return r
-                }
         }
 
-        dp := &DiffProcessor{}
-        dp.Left  = left
-        dp.Right = right
+        log.Printf("Top match %d\n", top_match)
+        log.Printf("Bottom match %d\n", bottom_match)
 
         //let's collect our matches
         //we will do sort and merge later
-        if top_match > 0 {
-                //we have some matching lines, let's create Matching entry
-                e := StringDiff{}
-                e.DiffType = DiffTypeMatch
-                e.LeftStartIndex  = left_lower_bound
-                e.LeftNextIndex   = left_lower_bound + top_match
-                e.RightStartIndex = right_lower_bound
-                e.RightNextIndex  = right_lower_bound + top_match
-                dp.Result = append (dp.Result, e)
+        dp := &DiffProcessor{}
+
+        dp.Head = DiffChunk{}
+        dp.Head.Type = DiffMatch
+        dp.Head.Window.LeftStart  = left_lower_bound
+        dp.Head.Window.LeftEnd    = left_lower_bound + top_match
+        dp.Head.Window.RightStart = right_lower_bound
+        dp.Head.Window.RightEnd   = right_lower_bound + top_match
+
+        dp.Tail = DiffChunk{}
+        dp.Tail.Type = DiffMatch
+        dp.Tail.Window.LeftStart  = left_upper_bound - bottom_match
+        dp.Tail.Window.LeftEnd    = left_upper_bound
+        dp.Tail.Window.RightStart = right_upper_bound - bottom_match
+        dp.Tail.Window.RightEnd   = right_upper_bound
+
+        if top_match + bottom_match >= smaller {
+                //we exhausted smaller range - we're done here
+                dp.Left  = left
+                dp.Right = right
+                dp.Completed = true
+
+                if len (left) > len (right) {
+                        //Right side is empty
+                        e := DiffChunk{}
+                        e.Type = DiffRightInsert
+
+                        e.Window.LeftStart  = left_lower_bound + top_match
+                        e.Window.LeftEnd    = left_upper_bound - bottom_match
+                        e.Window.RightStart = -1
+                        e.Window.RightEnd   = -1
+                        dp.Result = append (dp.Result, e)
+                } else {
+                        //Left side is empty
+                        e := DiffChunk{}
+                        e.Type = DiffLeftInsert
+
+                        e.Window.LeftStart  = -1
+                        e.Window.LeftEnd    = -1
+                        e.Window.RightStart = right_lower_bound + top_match
+                        e.Window.RightEnd   = right_upper_bound - bottom_match
+                        dp.Result = append (dp.Result, e)
+                }
+        } else {
+                dp.Left  = left[left_lower_bound + top_match : left_upper_bound - bottom_match]
+                dp.Right = right[right_lower_bound + top_match : right_upper_bound - bottom_match]
+                dp.Completed = false
+
+                //TODO Execute this thing in goroutine with timeout to reduce lag between 
+                //user command and screen display
+                dp.Run()
         }
 
-        if bottom_match > 0 {
-                e := StringDiff{}
-                e.DiffType = DiffTypeMatch
-                e.LeftStartIndex  = left_upper_bound - bottom_match
-                e.LeftNextIndex   = left_upper_bound
-                e.RightStartIndex = right_upper_bound - bottom_match
-                e.RightNextIndex  = right_upper_bound
-                dp.Result = append (dp.Result, e)
-        }
-
-        dw := DiffWindow{}
-        dw.LeftLowerBound  = left_lower_bound + top_match
-        dw.LeftUpperBound  = left_upper_bound - bottom_match
-        dw.RightLowerBound = right_lower_bound + top_match
-        dw.RightUpperBound = right_upper_bound - bottom_match
-
-        dp.Jobs = append (dp.Jobs, dw)
-        dp.Run()
-
-        return dp.Result
+        return dp
 }
 
 func (dp *DiffProcessor) Run() {
         dp.Score()
+        dp.ScoreToDiff()
+        dp.SortDiffChunks()
+        dp.Completed = true
+}
+
+func (dp *DiffProcessor) SortDiffChunks() {
+        var r []DiffChunk
+
+        st := time.Now()
+
+        lc, rc := 0, 0
+        found := true
+        for found {
+                found = false
+                for _, t := range (dp.Result) {
+                        if t.Type == DiffMatch || t.Type == DiffSubstitute {
+                                if t.Window.LeftStart == lc && t.Window.RightStart == rc {
+                                        lc, rc = t.Window.LeftEnd, t.Window.RightEnd
+                                        r = append (r, t)
+                                        found = true
+                                        break
+                                }
+                        } else if t.Type == DiffLeftInsert {
+                                if t.Window.RightStart == rc {
+                                        rc = t.Window.RightEnd
+                                        r = append (r, t)
+                                        found = true
+                                        break
+                                }
+                        } else {
+                                if t.Window.LeftStart == lc {
+                                        lc = t.Window.LeftEnd
+                                        r = append (r, t)
+                                        found = true
+                                        break
+                                }
+                        }
+                }
+        }
+
+        dp.Result = r
+
+        el := time.Since(st)
+        log.Printf("Sort chunks %v us\n", el.Microseconds())
+}
+
+func (dp *DiffProcessor) ScoreToDiff() {
+        var diff []DiffWindow
+
+        st := time.Now()
+
+        d := DiffWindow{ 0, len (dp.Left), 0, len (dp.Right) }
+        diff = append (diff, d)
 
         OUTER:
         for {
-                //let's grab a job
-                var dw DiffWindow
+                //we need this gymnastics because both score array and diff array changing their sizes
+                //during process
+                for i := 0; i < len (dp.Scores); i += 1 {
+                        if len (diff) == 0 {
+                                //all diff windows are accounted for -we're done here
+                                break OUTER
+                        }
 
-                if len (dp.Jobs) == 0 {
-                        //We're done here
-                        break
-                } else {
-                        dw = dp.Jobs[0]
-                        dp.Jobs = dp.Jobs[1:]
-                }
+                        sc := dp.Scores[i]
 
-                r_length := dw.RightUpperBound - dw.RightLowerBound
-                l_length := dw.LeftUpperBound - dw.LeftLowerBound
+                        sy := sc.Index / len (dp.Right) + 1
+                        sx := sc.Index % len (dp.Right) + 1
+                        y  := sy - int(sc.Value)
+                        x  := sx - int(sc.Value)
 
-                for i, t := range (dp.Scores) {
-                        if ok := dp.ProcessSingleMatch(dw, t); ok {
-                                //Process single match can add new jobs
-                                dp.RemoveScoreByIndex(i)
-                                continue OUTER
+                        for j := 0; j < len (diff); j += 1 {
+                                t := diff[j]
+                                //make sure that match range is withing diff window
+                                if t.LeftStart <= y && t.LeftEnd >= sy && t.RightStart <= x && t.RightEnd >= sx {
+                                        //ok account for this match
+                                        //first remove all scores, preceding current one
+                                        //the reason is that noone of those is within available diff windows
+                                        dp.Scores = dp.Scores[i:]
+
+                                        dp.InsertDiffChunk(DiffWindow{ y, sy, x, sx }, true)
+
+                                        //Now split diff window into three parts: top left, middle (match), and bottom right
+                                        //Current window gets removed from diff array, and top-left/bottom-right windows
+                                        //are added, if they have some workable size for both left and right ranges
+                                        left_top     := DiffWindow{ t.LeftStart, y, t.RightStart, x }
+                                        right_bottom := DiffWindow{ sy, t.LeftEnd, sx, t.RightEnd }
+                                        
+                                        tmp := diff[:j]
+                                        tmp = append (tmp, diff[j + 1:]...)
+                                        diff = tmp
+
+                                        if left_top.IsValid() {
+                                                diff = append (diff, left_top)
+                                        } else {
+                                                dp.InsertDiffChunk(left_top, false)
+                                        }
+
+                                        if right_bottom.IsValid() {
+                                                diff = append (diff, right_bottom)
+                                        } else {
+                                                dp.InsertDiffChunk(right_bottom, false)
+                                        }
+                                        continue OUTER
+                                }
                         }
                 }
-
-                //if we're here - there were no matches for this range
-                if l_length == r_length {
-                        //same number of strings on each side
-                        //let's use substitution here
-                        e := StringDiff{}
-                        e.DiffType = DiffTypeSubstitute
-                        e.LeftStartIndex  = dw.LeftLowerBound
-                        e.LeftNextIndex   = dw.LeftUpperBound
-                        e.RightStartIndex = dw.RightLowerBound
-                        e.RightNextIndex  = dw.RightUpperBound
-                        dp.Result = append (dp.Result, e)
-                } else {
-                        //different number of strings
-                        //we have to do fuzzy matching here sometime later
-                        //TODO
-                        if r_length > l_length {
-                                //Right is bigger
-                                l_diff := r_length - l_length
-
-                                e := StringDiff{}
-                                e.DiffType = DiffTypeLazySubstitute
-                                e.LeftStartIndex  = dw.LeftLowerBound
-                                e.LeftNextIndex   = dw.LeftUpperBound
-                                e.RightStartIndex = dw.RightLowerBound
-                                e.RightNextIndex  = dw.RightLowerBound + l_diff
-                                dp.Result = append (dp.Result, e)
-
-                                e = StringDiff{}
-                                e.DiffType = DiffTypeLazyRightInsert
-                                e.LeftStartIndex  = -1
-                                e.LeftNextIndex   = -1
-                                e.RightStartIndex = dw.RightLowerBound + l_diff
-                                e.RightNextIndex  = dw.RightUpperBound
-                                dp.Result = append (dp.Result, e)
-                        } else {
-                                //Left is bigger
-                                l_diff := l_length - r_length
-
-                                e := StringDiff{}
-                                e.DiffType = DiffTypeLazySubstitute
-                                e.LeftStartIndex  = dw.LeftLowerBound
-                                e.LeftNextIndex   = dw.LeftLowerBound + l_diff
-                                e.RightStartIndex = dw.RightLowerBound
-                                e.RightNextIndex  = dw.RightUpperBound
-                                dp.Result = append (dp.Result, e)
-
-                                e = StringDiff{}
-                                e.DiffType = DiffTypeLazyLeftInsert
-                                e.LeftStartIndex  = dw.LeftLowerBound + l_diff 
-                                e.LeftNextIndex   = dw.LeftUpperBound
-                                e.RightStartIndex = -1
-                                e.RightNextIndex  = -1
-                                dp.Result = append (dp.Result, e)
-                        }
-                }
+                //we're out of matches
+                break
         }
-        dp.Finalize()
+
+        for _, t := range (diff) {
+                dp.InsertDiffChunk(t, false)
+        }
+
+        el := time.Since(st)
+        log.Printf("Create diff chunks %v ms\n", el.Milliseconds())
 }
 
-func (dp *DiffProcessor) ProcessSingleMatch(dw DiffWindow, ds DiffScore) bool {
-
-        //we're OK here since matrix has extra row and column
-        //so end values are as we expected - excluded
-        //Left goes on Y-axis, Right goes on X-axis
-        r_end, l_end := dp.GetXY(ds.Index) 
-        r_start := r_end - int(ds.Score)
-        l_start := l_end - int(ds.Score)
-
-        if l_start < dw.LeftLowerBound || r_start < dw.RightLowerBound {
-                return false
-        } else if l_end > dw.LeftUpperBound || r_end > dw.RightUpperBound {
-                return false
+func (dp *DiffProcessor) InsertDiffChunk(dw DiffWindow, match bool) {
+        if match {
+                dp.Result = append (dp.Result, DiffChunk{ DiffMatch, dw})
+                return
         }
 
-        e := StringDiff{}
-        e.DiffType = DiffTypeMatch
-        e.LeftStartIndex  = l_start
-        e.LeftNextIndex   = l_end
-        e.RightStartIndex = r_start
-        e.RightNextIndex  = r_end
-        dp.Result = append (dp.Result, e)
+        ls := dw.LeftEnd - dw.LeftStart
+        rs := dw.RightEnd - dw.RightStart
 
-        top_dw := DiffWindow{}
-        top_dw.LeftLowerBound = dw.LeftLowerBound
-        top_dw.LeftUpperBound = l_start
-        top_dw.RightLowerBound = dw.RightLowerBound
-        top_dw.RightUpperBound = r_start
+        if ls == 0 && rs == 0 {
+                return
+        }
 
-        dp.MaybeInsert(top_dw)
+        if ls == 0 {
+                ins := DiffChunk{ DiffLeftInsert, DiffWindow{ -1, -1, dw.RightStart, dw.RightEnd }}
+                dp.Result = append (dp.Result, ins)
+        } else if rs == 0 {
+                ins := DiffChunk{ DiffRightInsert, DiffWindow{ dw.LeftStart, dw.LeftEnd, -1, -1 }}
+                dp.Result = append (dp.Result, ins)
+        } else if ls == rs {
+                dp.Result = append (dp.Result, DiffChunk{ DiffSubstitute, dw })
+        } else {
+                if ls > rs {
+                        sub := DiffChunk{ DiffSubstitute, DiffWindow{ dw.LeftStart, dw.LeftStart + rs, dw.RightStart, dw.RightEnd }} 
+                        dp.Result = append (dp.Result, sub)
+                        ins := DiffChunk{ DiffRightInsert, DiffWindow{ dw.LeftStart + rs, dw.LeftEnd, -1, -1 }}
+                        dp.Result = append (dp.Result, ins)
+                } else {
+                        sub := DiffChunk{ DiffSubstitute, DiffWindow{ dw.LeftStart, dw.LeftEnd, dw.RightStart, dw.RightStart + ls }} 
+                        dp.Result = append (dp.Result, sub)
+                        ins := DiffChunk{ DiffLeftInsert, DiffWindow{ -1, -1, dw.RightStart + ls, dw.RightEnd }}
+                        dp.Result = append (dp.Result, ins)
+                }
+        }
+}
 
-        bottom_dw := DiffWindow{}
-        bottom_dw.LeftLowerBound = l_end
-        bottom_dw.LeftUpperBound = dw.LeftUpperBound
-        bottom_dw.RightLowerBound = r_end
-        bottom_dw.RightUpperBound = dw.RightUpperBound
-
-        dp.MaybeInsert(bottom_dw)
-
+func (d DiffWindow) IsValid() bool {
+        if ((d.LeftEnd - d.LeftStart) < 2) || ((d.RightEnd - d.RightStart) < 2) {
+                return false
+        }
         return true
 }
 
-func (dp *DiffProcessor) MaybeInsert(dw DiffWindow) {
-        if dw.LeftLowerBound == dw.LeftUpperBound && dw.RightLowerBound == dw.RightUpperBound {
-                //nothing to insert
-                return
-        } else if dw.LeftLowerBound == dw.LeftUpperBound {
-                //nothing on the left so create right insert only
-                e := StringDiff{}
-                e.DiffType = DiffTypeRightInsert
-                e.LeftStartIndex  = -1
-                e.LeftNextIndex   = -1
-                e.RightStartIndex = dw.RightLowerBound
-                e.RightNextIndex  = dw.RightUpperBound
-                dp.Result = append (dp.Result, e)
-        } else if dw.RightLowerBound == dw.RightUpperBound {
-                //nothing on the right so create left insert only
-                e := StringDiff{}
-                e.DiffType = DiffTypeLeftInsert
-                e.LeftStartIndex  = dw.LeftLowerBound
-                e.LeftNextIndex   = dw.LeftUpperBound
-                e.RightStartIndex = -1
-                e.RightNextIndex  = -1
-                dp.Result = append (dp.Result, e)
-        } else {
-                dp.Jobs = append (dp.Jobs, dw)
-        }
-}
-
 func (dp *DiffProcessor) Score() {
-        dw := dp.Jobs[0]
+        start := time.Now()
 
-        //Let's prepare and fill matrix
-        //we add apron to check previous match so we don't have to check for first
-        //row,column on each iteration
-        //Left goes on Y-axis, Right goes on X-axis
-        dp.X  = dw.RightLowerBound
-        dp.Y  = dw.LeftLowerBound
-        dp.SX = dw.RightUpperBound - dw.RightLowerBound + 1
-        dp.SY = dw.LeftUpperBound - dw.LeftLowerBound + 1
+        ll := len (dp.Left)
+        rl := len (dp.Right)
 
-        dp.Matrix = make([]uint16, dp.SX * dp.SY)
+        m := make ([]uint16, ll * rl)
 
-        for y := 1; y < dp.SY; y += 1 {
-                for x := 1; x < dp.SX; x += 1 {
-                        prev_match_idx := (y - 1) * dp.SX + (x - 1)
-                        idx := y * dp.SX + x
-                        dp.Matrix[idx] = 0;
-
-                        left_idx  := (y - 1) + dw.LeftLowerBound
-                        right_idx := (x - 1) + dw.RightLowerBound
-
-                        if dp.Left[left_idx] == dp.Right[right_idx] {
-                                dp.Matrix[idx] = 1 + dp.Matrix[prev_match_idx]
-                                //we reset previous match so it won't participate in max search
-                                //and don't confuse us
-                                dp.Matrix[prev_match_idx] = 0
+        for i, l := range (dp.Left) {
+                for j, r := range (dp.Right) {
+                        if l == r {
+                                idx := i * rl + j
+                                if i > 0 && j > 0 {
+                                        p_idx := (i - 1) * rl + (j - 1)
+                                        m[idx] = 1 + m[p_idx]
+                                        m[p_idx] = 0
+                                } else {
+                                        m[idx] = 1
+                                }
                         }
                 }
         }
 
-        for i, t := range (dp.Matrix) {
+        for i, t := range (m) {
                 if t > 0 {
-                        dp.Scores = append (dp.Scores, DiffScore{ i, t })
-                }
-        }
-        sort.Sort(sort.Reverse(DiffScoreSlice(dp.Scores)))
-}
-
-func (dp *DiffProcessor) GetXY (idx int) (x, y int) {
-        //TODO: Do we need to account for apron?
-        y = (idx / dp.SX) + dp.Y
-        x = (idx % dp.SX) + dp.X
-        return
-}
-
-func (dp *DiffProcessor) RemoveScoreByIndex(idx int) {
-        tmp := dp.Scores[:idx]
-        tmp = append (tmp, dp.Scores[idx + 1:]...)
-        dp.Scores = tmp
-}
-
-func (dp *DiffProcessor) Finalize() {
-        var sorted []StringDiff
-
-        lc, rc := 0,0
-        for i := 0; i < len (dp.Result); i += 1 {
-                sd := dp.GetByConstraint(lc, rc)
-                sorted = append (sorted, sd)
-                if sd.LeftNextIndex != -1 {
-                        lc = sd.LeftNextIndex
-                }
-                if sd.RightNextIndex != -1 {
-                        rc = sd.RightNextIndex
+                        dp.Scores = append (dp.Scores, Score{i, t})
                 }
         }
 
-        dp.Result = sorted
+        sort.Sort(sort.Reverse(ScoreSlice(dp.Scores)))
+        elapsed := time.Since(start)
 
-        for i, t := range (dp.Result) {
-                log.Printf("%d:\t\t%v\n", i, t)
-        }
+        log.Printf("Scoring: %v us\n", elapsed.Microseconds())
 }
 
-func (dp *DiffProcessor) GetByConstraint(l, r int) StringDiff {
-        for _, t := range (dp.Result) {
-                if l == t.LeftStartIndex && r == t.RightStartIndex {
-                        return t
-                } else if l == t.LeftStartIndex && t.RightStartIndex == -1 {
-                        return t
-                } else if t.LeftStartIndex == -1 && r == t.RightStartIndex {
-                        return t
+func (dv *DiffView) SetContentFileEasy(left, right []string) {
+        r := &DiffLines{}
+        r.Type = StringDiff
+
+        if left == nil {
+                for _, s := range (right) {
+                        e := DiffLine{ "", DiffLeftInsert }
+                        r.Left = append (r.Left, e)
+
+                        e = DiffLine{ s, DiffLeftInsert }
+                        r.Right = append (r.Right, e)
+                }
+        } else {
+                for _, s := range (left) {
+                        e := DiffLine{ s, DiffRightInsert }
+                        r.Left = append (r.Left, e)
+
+                        e = DiffLine{ "", DiffRightInsert }
+                        r.Right = append (r.Right, e)
                 }
         }
-        //should never reach here
-        return StringDiff{ -1, -1, -1, -1, -1 }
+
+        dv.Content = r
 }
 
 func (dv *DiffView) SetContentFile(left, right []string) {
-        r := &DiffData{}
+        r := &DiffLines{}
+        r.Type = StringDiff
 
-        diff := GetStringDiff(left, right)
+        if left == nil || right == nil {
+                dv.SetContentFileEasy(left, right)
+                return
+        }
 
-        for _, t := range (diff) {
-                if t.DiffType == DiffTypeMatch {
-                        for i := t.LeftStartIndex; i < t.LeftNextIndex; i += 1 {
-                                e := DiffDataItem{ left[i], 0 }
+        start := time.Now()
+
+        dp := GetStringDiff(left, right)
+
+
+        //dp.Head and dp.Tail chunks are based on full ranges
+        //dp.Result chunks are based on curated ranges
+
+        if dp.Head.Window.LeftEnd > dp.Head.Window.LeftStart {
+                for i := dp.Head.Window.LeftStart; i < dp.Head.Window.LeftEnd; i += 1 {
+                        e := DiffLine{ left[i], dp.Head.Type }
+                        r.Left = append (r.Left, e)
+                }
+
+                for i := dp.Head.Window.RightStart; i < dp.Head.Window.RightEnd; i += 1 {
+                        e := DiffLine{ right[i], dp.Head.Type }
+                        r.Right = append (r.Right, e)
+                }
+        }
+
+        for _, t := range (dp.Result) {
+                switch t.Type {
+                case DiffMatch, DiffSubstitute:
+                        for i := t.Window.LeftStart; i < t.Window.LeftEnd; i += 1 {
+                                e := DiffLine{ dp.Left[i], t.Type }
                                 r.Left = append (r.Left, e)
                         }
 
-                        for i := t.RightStartIndex; i < t.RightNextIndex; i += 1 {
-                                e := DiffDataItem{ right[i], 0 }
+                        for i := t.Window.RightStart; i < t.Window.RightEnd; i += 1 {
+                                e := DiffLine{ dp.Right[i], t.Type }
                                 r.Right = append (r.Right, e)
                         }
-                } else if t.DiffType == DiffTypeLeftInsert {
-                        for i := t.LeftStartIndex; i < t.LeftNextIndex; i += 1 {
-                                e := DiffDataItem{ left[i], DiffNoMatch }
+                case DiffRightInsert:
+                        for i := t.Window.LeftStart; i < t.Window.LeftEnd; i += 1 {
+                                e := DiffLine{ dp.Left[i], t.Type }
                                 r.Left = append (r.Left, e)
 
-                                e = DiffDataItem{ "", DiffNoMatch | DiffForceInsert }
+                                e = DiffLine{ "", t.Type }
                                 r.Right = append (r.Right, e)
                         }
-                } else if t.DiffType == DiffTypeRightInsert {
-                        for i := t.RightStartIndex; i < t.RightNextIndex; i += 1 {
-                                e := DiffDataItem{ "", DiffNoMatch | DiffForceInsert }
+                case DiffLeftInsert:
+                        for i := t.Window.RightStart; i < t.Window.RightEnd; i += 1 {
+                                e := DiffLine{ "", t.Type }
                                 r.Left = append (r.Left, e)
 
-                                e = DiffDataItem{ right[i], DiffNoMatch }
-                                r.Right = append (r.Right, e)
-                        }
-                } else if t.DiffType == DiffTypeSubstitute {
-                        for i := t.LeftStartIndex; i < t.LeftNextIndex; i += 1 {
-                                e := DiffDataItem{ left[i], DiffNoMatch}
-                                r.Left = append (r.Left, e)
-                        }
-
-                        for i := t.RightStartIndex; i < t.RightNextIndex; i += 1 {
-                                e := DiffDataItem{ right[i], DiffNoMatch }
-                                r.Right = append (r.Right, e)
-                        }
-                } else if t.DiffType == DiffTypeLazySubstitute {
-                        for i := t.LeftStartIndex; i < t.LeftNextIndex; i += 1 {
-                                e := DiffDataItem{ left[i], DiffNoMatch | DiffLazy }
-                                r.Left = append (r.Left, e)
-                        }
-
-                        for i := t.RightStartIndex; i < t.RightNextIndex; i += 1 {
-                                e := DiffDataItem{ right[i], DiffNoMatch | DiffLazy }
-                                r.Right = append (r.Right, e)
-                        }
-                } else if t.DiffType == DiffTypeLazyLeftInsert {
-                        for i := t.LeftStartIndex; i < t.LeftNextIndex; i += 1 {
-                                e := DiffDataItem{ left[i], DiffNoMatch | DiffLazy }
-                                r.Left = append (r.Left, e)
-
-                                e = DiffDataItem{ "", DiffNoMatch | DiffForceInsert | DiffLazy }
-                                r.Right = append (r.Right, e)
-                        }
-                } else if t.DiffType == DiffTypeLazyRightInsert {
-                        for i := t.RightStartIndex; i < t.RightNextIndex; i += 1 {
-                                e := DiffDataItem{ "", DiffNoMatch | DiffForceInsert | DiffLazy }
-                                r.Left = append (r.Left, e)
-
-                                e = DiffDataItem{ right[i], DiffNoMatch | DiffLazy }
+                                e = DiffLine{ dp.Right[i], t.Type }
                                 r.Right = append (r.Right, e)
                         }
                 }
         }
+
+        if dp.Tail.Window.LeftEnd > dp.Tail.Window.LeftStart {
+                for i := dp.Tail.Window.LeftStart; i < dp.Tail.Window.LeftEnd; i += 1 {
+                        e := DiffLine{ left[i], dp.Tail.Type }
+                        r.Left = append (r.Left, e)
+                }
+
+                for i := dp.Tail.Window.RightStart; i < dp.Tail.Window.RightEnd; i += 1 {
+                        e := DiffLine{ right[i], dp.Tail.Type }
+                        r.Right = append (r.Right, e)
+                }
+        }
+
+        elapsed := time.Since(start)
+        log.Printf("Results to lines: %v ms\n", elapsed.Milliseconds())
+
+        log.Printf("Lines left %d, right %d\n", len (r.Left), len (r.Right))
         dv.Content = r
 }
 
 func (dv *DiffView) SetContentTree() {
-        result := &DiffData{}
+        result := &DiffLines{}
+        result.Type = TreeDiff
 
-        l := dv.LeftFileTree
-        r := dv.RightFileTree
+        //Append root node
+        dt := DiffMatch
+        if dv.LeftTree.Name != dv.RightTree.Name || !bytes.Equal(dv.LeftTree.HashValue, dv.RightTree.HashValue) {
+                dt = DiffSubstitute
+        }
+        e := DiffLine{ dv.LeftTree.GetName(), dt }
+        result.Left = append (result.Left, e)
+
+        e = DiffLine{ dv.RightTree.GetName(), dt }
+        result.Right = append (result.Right, e)
+
+        if !dv.LeftTree.Expanded {
+                //If root node not expanded we're done here
+                return
+        }
+
+        l := dv.LeftTree.Data.([]*DiffTree)
+        r := dv.RightTree.Data.([]*DiffTree)
         l_idx, r_idx := 0, 0
 
-        var stack []DiffTreeStack
+        var stack []TreeStack
 
         OUTER:
         for {
@@ -480,9 +461,9 @@ func (dv *DiffView) SetContentTree() {
                 if l_idx >= len (l) {
                         //We exhausted left array, but still have something on right side
                         ri := r[r_idx]
-                        e := DiffDataItem{ "", DiffNoMatch | DiffForceInsert }
+                        e := DiffLine{ "", DiffLeftInsert }
                         result.Left = append (result.Left, e)
-                        e = DiffDataItem{ ri.GetName(), DiffNoMatch }
+                        e = DiffLine{ ri.GetName(), DiffLeftInsert }
                         result.Right = append (result.Right, e)
 
                         r_idx += 1
@@ -490,9 +471,9 @@ func (dv *DiffView) SetContentTree() {
                 } else if r_idx >= len (r) {
                         //We exhausted right array, but still have something on left side
                         li := l[l_idx]
-                        e := DiffDataItem{ li.GetName(), DiffNoMatch }
+                        e := DiffLine{ li.GetName(), DiffRightInsert }
                         result.Left = append (result.Left, e)
-                        e = DiffDataItem{ "", DiffNoMatch | DiffForceInsert }
+                        e = DiffLine{ "", DiffRightInsert }
                         result.Right = append (result.Right, e)
 
                         l_idx += 1
@@ -504,68 +485,51 @@ func (dv *DiffView) SetContentTree() {
                 ri := r[r_idx]
                 dominant := li
 
-                dt := DiffTypeMatch
-                if l_idx == 0 && r_idx == 0 {
-                        //Special case for root folders - force them to be on the same level
-                        //Even if they have different names
-                        if !bytes.Equal(li.HashValue, ri.HashValue) {
-                                dt = DiffTypeSubstitute
-                        }
-                } else {
-                        dt = GetDiffTreeType(li, ri)
-                }
+                dt := GetDiffType(li, ri)
 
                 switch dt {
-                case DiffTypeMatch:
-                        e := DiffDataItem{ li.GetName(), 0 }
+                case DiffMatch, DiffSubstitute:
+                        e := DiffLine{ li.GetName(), dt }
                         result.Left = append (result.Left, e)
-                        e = DiffDataItem{ ri.GetName(), 0 }
+                        e = DiffLine{ ri.GetName(), dt }
                         result.Right = append (result.Right, e)
 
                         l_idx += 1
                         r_idx += 1
-                case DiffTypeLeftInsert:
-                        e := DiffDataItem{ "", DiffNoMatch | DiffForceInsert }
+                case DiffLeftInsert:
+                        e := DiffLine{ "", DiffLeftInsert }
                         result.Left = append (result.Left, e)
-                        e = DiffDataItem{ ri.GetName(), DiffNoMatch }
+                        e = DiffLine{ ri.GetName(), DiffLeftInsert }
                         result.Right = append (result.Right, e)
 
                         dominant = ri
                         r_idx += 1
-                case DiffTypeRightInsert:
-                        e := DiffDataItem{ li.GetName(), DiffNoMatch }
+                case DiffRightInsert:
+                        e := DiffLine{ li.GetName(), DiffRightInsert }
                         result.Left = append (result.Left, e)
-                        e = DiffDataItem{ "", DiffNoMatch | DiffForceInsert }
+                        e = DiffLine{ "", DiffRightInsert }
                         result.Right = append (result.Right, e)
 
                         l_idx += 1
-                case DiffTypeSubstitute:
-                        e := DiffDataItem{ li.GetName(), DiffNoMatch }
-                        result.Left = append (result.Left, e)
-                        e = DiffDataItem{ ri.GetName(), DiffNoMatch }
-                        result.Right = append (result.Right, e)
-
-                        l_idx += 1
-                        r_idx += 1
                 }
 
                 if dominant.Expanded {
-                        t := DiffTreeStack{ l, r, l_idx, r_idx }
+                        t := TreeStack{ l, r, l_idx, r_idx }
                         stack = append (stack, t)
 
                         l_idx = 0
                         r_idx = 0
 
-                        zero := make([]*DiffTreeItem, 0)
+                        zero := make([]*DiffTree, 0)
                         switch dt {
-                        case DiffTypeMatch, DiffTypeSubstitute:
-                                l = li.Data.([]*DiffTreeItem)
-                                r = ri.Data.([]*DiffTreeItem)
-                        case DiffTypeLeftInsert:
+                        case DiffMatch, DiffSubstitute:
+                                l = li.Data.([]*DiffTree)
+                                r = ri.Data.([]*DiffTree)
+                        case DiffLeftInsert:
                                 l = zero
-                                r = ri.Data.([]*DiffTreeItem)
-                        case DiffTypeRightInsert:
-                                l = li.Data.([]*DiffTreeItem)
+                                r = ri.Data.([]*DiffTree)
+                        case DiffRightInsert:
+                                l = li.Data.([]*DiffTree)
                                 r = zero
                         }
                 }
@@ -574,30 +538,31 @@ func (dv *DiffView) SetContentTree() {
         dv.Content = result
 }
 
-func GetDiffTreeType(l, r *DiffTreeItem) int {
+func GetDiffType(l, r *DiffTree) int {
         if l.Dir && !r.Dir {
-                return DiffTypeRightInsert
+                return DiffRightInsert
         } else if !l.Dir && r.Dir {
-                return DiffTypeLeftInsert
+                return DiffLeftInsert
         } else if l.Name == r.Name {
                 if bytes.Equal(l.HashValue, r.HashValue) {
-                        return DiffTypeMatch
+                        return DiffMatch
                 } else {
-                        return DiffTypeSubstitute
+                        return DiffSubstitute
                 }
         }
 
+        //If we're here we have two files or directories with different names
         ll := strings.ToLower(l.Name)
         rl := strings.ToLower(r.Name)
 
         if ll < rl {
-                return DiffTypeRightInsert
+                return DiffRightInsert
         } else {
-                return DiffTypeLeftInsert
+                return DiffLeftInsert
         }
 }
 
-func (di *DiffTreeItem) GetName() (ds string) {
+func (di *DiffTree) GetName() (ds string) {
         prefix := ""
         if di.Indent != 0 {
                 prefix = strings.Repeat("  ", di.Indent)
@@ -613,3 +578,118 @@ func (di *DiffTreeItem) GetName() (ds string) {
         ds = prefix + di.Name
         return
 }
+
+func (dv *DiffView) GetDiffTreeFromContent() (left, right *DiffTree) {
+        idx := dv.BaseIndex + dv.FocusLine
+        match := dv.Content.Left[idx].Type
+
+        //we need to traverse []*DiffTree list in the same fashion we do when we create
+        //content to draw to find corresponding DiffTree item at the FocusLine
+
+        if idx == 0 {
+                //This would be our root, no need to traverse
+                left  = dv.LeftTree
+                right = dv.RightTree
+                return
+        }
+
+        idx -= 1
+        l := dv.LeftTree.Data.([]*DiffTree)
+        r := dv.RightTree.Data.([]*DiffTree)
+        l_idx, r_idx := 0, 0
+
+        var stack []TreeStack
+
+        OUTER:
+        for idx > 0 {
+                if l_idx >= len (l) && r_idx >= len (r) {
+                        //We finished current directory
+                        if len (stack) == 0 {
+                                //There is nothing in the stack either
+                                break OUTER
+                        } else {
+                                //pop one from stack and continue
+                                t := stack[len (stack) - 1]
+                                stack = stack[: len (stack) - 1]
+                                l = t.Left
+                                r = t.Right
+                                l_idx = t.LeftIndex
+                                r_idx = t.RightIndex
+                                //we do continue here so we can check indexes agains sizes again
+                                continue OUTER
+                        }
+                }
+
+                if l_idx >= len (l) {
+                        //We exhausted left array, but still have something on right side
+                        idx -= 1
+                        r_idx += 1
+                        continue OUTER
+                } else if r_idx >= len (r) {
+                        //We exhausted right array, but still have something on left side
+                        idx -= 1
+                        l_idx += 1
+                        continue OUTER
+                }
+
+                //ok, we have something to work on
+                li := l[l_idx]
+                ri := r[r_idx]
+                dominant := li
+
+                dt := GetDiffType(li, ri)
+
+                switch dt {
+                case DiffMatch, DiffSubstitute:
+                        idx -= 1
+                        l_idx += 1
+                        r_idx += 1
+                case DiffLeftInsert:
+                        idx -= 1
+                        dominant = ri
+                        r_idx += 1
+                case DiffRightInsert:
+                        idx -= 1
+                        l_idx += 1
+                }
+
+                if dominant.Expanded {
+                        t := TreeStack{ l, r, l_idx, r_idx }
+                        stack = append (stack, t)
+
+                        idx -= 1
+                        l_idx = 0
+                        r_idx = 0
+
+                        zero := make([]*DiffTree, 0)
+                        switch dt {
+                        case DiffMatch, DiffSubstitute:
+                                l = li.Data.([]*DiffTree)
+                                r = ri.Data.([]*DiffTree)
+                        case DiffLeftInsert:
+                                l = zero
+                                r = ri.Data.([]*DiffTree)
+                        case DiffRightInsert:
+                                l = li.Data.([]*DiffTree)
+                                r = zero
+                        }
+                }
+        }
+
+        //hopefully we're at correct index
+        //l, r, l_idx and r_idx point to right item, except we have to check
+        //if there was Insert - in this case one side must be ignored
+
+        if match == DiffLeftInsert {
+                left = nil
+                right = r[r_idx]
+        } else if match == DiffRightInsert {
+                left = l[l_idx]
+                right = nil
+        } else {
+                left = l[l_idx]
+                right = r[r_idx]
+        }
+        return
+}
+
