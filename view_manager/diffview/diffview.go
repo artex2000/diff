@@ -62,6 +62,8 @@ func  (dv *DiffView) ProcessKeyEvent(kc KeyCommand) int {
         switch cmd {
         case CmdQuit:
                 return ViewEventClose
+        case CmdQuery:
+                r, extra, err = dv.Query()
         case CmdMoveTop:
                 r, extra, err = dv.MoveTop()
         case CmdMoveBottom:

@@ -179,3 +179,17 @@ func (dv *DiffView) InitDiffTree(leftPath, rightPath string) error {
 
         return nil
 }
+
+func (dt *DiffTree) Expand(root string) {
+        n := dt.Name
+        for p := dt.Parent; p != nil; p = p.Parent {
+                n = filepath.Join(p.Name, n)
+        }
+        n = filepath.Join(root, n)
+        names := dt.Data.([]*DiffTree)
+        for _, t := range names {
+                t.Hash(n)
+        }
+}
+
+

@@ -29,7 +29,7 @@ func GetStringDiff(left, right []string) *DiffProcessor {
         top_diff    := false
         bottom_diff := false
 
-        for idx := 0; !top_diff || !bottom_diff; idx += 1 {
+        for idx := 0; (!top_diff || !bottom_diff) && (top_match + bottom_match < smaller); idx += 1 {
                 if !top_diff {
                         if left[left_lower_bound + idx] == right[right_lower_bound + idx] {
                                 top_match += 1
@@ -50,6 +50,17 @@ func GetStringDiff(left, right []string) *DiffProcessor {
 
         log.Printf("Top match %d\n", top_match)
         log.Printf("Bottom match %d\n", bottom_match)
+
+
+        //At this point we have either top_match + bottom_match == smaller
+        //or top_match + bottom_match == smaller + 1, because each iteration can move
+        //up to 2 units, so if on previous iteration t_m + b_m < sm and on next it's not
+        //it can be only either equal or bigger by one
+        //If length of both files is equal - condition where t_m + b_m > len would mean
+        //that middle string was counted twice (for top match and bottom match)
+        if (top_match + bottom_match > smaller) && (len (left) == len (right)) {
+                bottom_match -= 1
+        }
 
         //let's collect our matches
         //we will do sort and merge later
@@ -85,7 +96,7 @@ func GetStringDiff(left, right []string) *DiffProcessor {
                         e.Window.RightStart = -1
                         e.Window.RightEnd   = -1
                         dp.Result = append (dp.Result, e)
-                } else {
+                } else if len (left) < len (right) {
                         //Left side is empty
                         e := DiffChunk{}
                         e.Type = DiffLeftInsert
@@ -429,6 +440,7 @@ func (dv *DiffView) SetContentTree() {
 
         if !dv.LeftTree.Expanded {
                 //If root node not expanded we're done here
+                dv.Content = result
                 return
         }
 
@@ -579,117 +591,105 @@ func (di *DiffTree) GetName() (ds string) {
         return
 }
 
-func (dv *DiffView) GetDiffTreeFromContent() (left, right *DiffTree) {
-        idx := dv.BaseIndex + dv.FocusLine
-        match := dv.Content.Left[idx].Type
+func (dv *DiffView) GetDiffTreeFromContent(p int) (left, right *DiffTree) {
+        //idx := dv.BaseIndex + dv.FocusLine
+        idx  := 0
+        goal := p
+        if goal < 0 {
+                goal = dv.BaseIndex + dv.FocusLine
+        }
+        log.Printf("--------- getting %d\n", goal)
 
         //we need to traverse []*DiffTree list in the same fashion we do when we create
         //content to draw to find corresponding DiffTree item at the FocusLine
 
-        if idx == 0 {
+        if goal == 0 {
                 //This would be our root, no need to traverse
                 left  = dv.LeftTree
                 right = dv.RightTree
                 return
         }
 
-        idx -= 1
+        idx += 1 //imitate append
+
         l := dv.LeftTree.Data.([]*DiffTree)
         r := dv.RightTree.Data.([]*DiffTree)
         l_idx, r_idx := 0, 0
 
+        left, right = nil, nil
+
         var stack []TreeStack
 
         OUTER:
-        for idx > 0 {
-                if l_idx >= len (l) && r_idx >= len (r) {
-                        //We finished current directory
-                        if len (stack) == 0 {
-                                //There is nothing in the stack either
+        for {
+                for l_idx < len (l) || r_idx < len (r) {
+
+                        if idx == goal { //ok we're at correct place, (l,r,l_idx,r_idx point to right thing)
                                 break OUTER
+                        }
+
+                        var li, ri *DiffTree
+
+                        if l_idx == len (l) {
+                                li = nil
+                                ri = r[r_idx]
+                                idx += 1
+                                r_idx += 1
+                        } else if r_idx == len (r) {
+                                li = l[l_idx]
+                                ri = nil
+                                idx += 1
+                                l_idx += 1
                         } else {
-                                //pop one from stack and continue
-                                t := stack[len (stack) - 1]
-                                stack = stack[: len (stack) - 1]
-                                l = t.Left
-                                r = t.Right
-                                l_idx = t.LeftIndex
-                                r_idx = t.RightIndex
-                                //we do continue here so we can check indexes agains sizes again
-                                continue OUTER
+                                li = l[l_idx]
+                                ri = r[r_idx]
+                                idx += 1
+                                l_idx += 1
+                                r_idx += 1
+                        }
+                        //here l_idx and r_idx point to next item on the same level
+                        //however we have to check should we go deeper on level or not
+                        if (li != nil && li.Dir && li.Expanded) || (ri != nil && ri.Dir && ri.Expanded) {
+                                t := TreeStack{ l, r, l_idx, r_idx }
+                                stack = append (stack, t)
+
+                                if li != nil {
+                                        l = li.Data.([]*DiffTree)
+                                        l_idx = 0
+                                }
+
+                                if ri != nil {
+                                        r = ri.Data.([]*DiffTree)
+                                        r_idx = 0
+                                }
+
+                                if idx == goal {
+                                        break OUTER
+                                }
                         }
                 }
 
-                if l_idx >= len (l) {
-                        //We exhausted left array, but still have something on right side
-                        idx -= 1
-                        r_idx += 1
-                        continue OUTER
-                } else if r_idx >= len (r) {
-                        //We exhausted right array, but still have something on left side
-                        idx -= 1
-                        l_idx += 1
-                        continue OUTER
-                }
-
-                //ok, we have something to work on
-                li := l[l_idx]
-                ri := r[r_idx]
-                dominant := li
-
-                dt := GetDiffType(li, ri)
-
-                switch dt {
-                case DiffMatch, DiffSubstitute:
-                        idx -= 1
-                        l_idx += 1
-                        r_idx += 1
-                case DiffLeftInsert:
-                        idx -= 1
-                        dominant = ri
-                        r_idx += 1
-                case DiffRightInsert:
-                        idx -= 1
-                        l_idx += 1
-                }
-
-                if dominant.Expanded {
-                        t := TreeStack{ l, r, l_idx, r_idx }
-                        stack = append (stack, t)
-
-                        idx -= 1
-                        l_idx = 0
-                        r_idx = 0
-
-                        zero := make([]*DiffTree, 0)
-                        switch dt {
-                        case DiffMatch, DiffSubstitute:
-                                l = li.Data.([]*DiffTree)
-                                r = ri.Data.([]*DiffTree)
-                        case DiffLeftInsert:
-                                l = zero
-                                r = ri.Data.([]*DiffTree)
-                        case DiffRightInsert:
-                                l = li.Data.([]*DiffTree)
-                                r = zero
-                        }
-                }
+                log.Println("pop")
+                t := stack[len (stack) - 1]
+                stack = stack[: len (stack) - 1]
+                l = t.Left
+                r = t.Right
+                l_idx = t.LeftIndex
+                r_idx = t.RightIndex
         }
 
+        log.Printf("fin: len l %d, len r %d, l_idx %d, r_idx %d, cnt %d, goal %d\n", len (l), len (r), l_idx, r_idx, idx, goal)
         //hopefully we're at correct index
         //l, r, l_idx and r_idx point to right item, except we have to check
         //if there was Insert - in this case one side must be ignored
 
-        if match == DiffLeftInsert {
-                left = nil
-                right = r[r_idx]
-        } else if match == DiffRightInsert {
+        if l != nil {
                 left = l[l_idx]
-                right = nil
-        } else {
-                left = l[l_idx]
+        } 
+
+        if r != nil {
                 right = r[r_idx]
-        }
+        } 
         return
 }
 

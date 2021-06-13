@@ -1,5 +1,7 @@
 package diffview
 
+import "log"
+
 func (dv *DiffView) MoveUp() (int, interface{}, error) {
         OldPos := dv.FocusLine
         if dv.FocusLine > 0 {
@@ -14,7 +16,7 @@ func (dv *DiffView) MoveUp() (int, interface{}, error) {
 
 func (dv *DiffView) MoveDown() (int, interface{}, error) {
         OldPos := dv.FocusLine
-        lines_left := len (dv.Content.Left) - dv.BaseIndex - dv.FocusLine
+        lines_left := len (dv.Content.Left) - dv.BaseIndex - dv.FocusLine - 1 //line currently focused accounted for
         if dv.FocusLine < dv.Rows - 1 {
                 if lines_left > 0 {
                         dv.FocusLine += 1
@@ -109,30 +111,58 @@ func (dv *DiffView) ShowDiff() (int, interface{}, error) {
                 return ViewDrawNone, nil, nil
         }
 
-        left, right := dv.GetDiffTreeFromContent()
+        expand_dir := true
+
+        left, right := dv.GetDiffTreeFromContent(-1)
         if left == nil {
                 if right.Dir {
                         right.Expanded = !right.Expanded
-                        dv.SetContentTree()
+                        if right.Expanded {
+                               right.Expand(dv.RightPaneRoot)
+                        }
                 } else {
-                        dv.SetContentFile(nil, right.Data.([]string))
+                        expand_dir = false
                 }
         } else if right == nil {
                 if left.Dir {
                         left.Expanded = !left.Expanded
-                        dv.SetContentTree()
+                        if left.Expanded {
+                               left.Expand(dv.LeftPaneRoot)
+                        }
                 } else {
-                        dv.SetContentFile(left.Data.([]string), nil)
+                        expand_dir = false
                 }
         } else {
                 if left.Dir {
                         left.Expanded = !left.Expanded
+                        if left.Expanded {
+                               left.Expand(dv.LeftPaneRoot)
+                        }
                         right.Expanded = !right.Expanded
-                        dv.SetContentTree()
+                        if right.Expanded {
+                               right.Expand(dv.RightPaneRoot)
+                        }
                 } else {
-                        dv.SetContentFile(left.Data.([]string), right.Data.([]string))
+                        expand_dir = false
                 }
         }
-        return ViewDrawAll, nil, nil
 
+        if expand_dir {
+                dv.SetContentTree()
+        } else {
+                dv.SetContentFile(left.Data.([]string), right.Data.([]string))
+                f := FocusPos{ dv.BaseIndex, dv.FocusLine }
+                dv.FocusStack = append (dv.FocusStack, f)
+                dv.BaseIndex, dv.FocusLine = 0, 0
+        }
+
+        return ViewDrawAll, nil, nil
+}
+
+func (dv *DiffView) Query() (int, interface{}, error) {
+        for i := 0; i < len (dv.Content.Left); i += 1 {
+                l, r := dv.GetDiffTreeFromContent(i)
+                log.Printf("%d:\t%s - %s\n", i, l.Name, r.Name)
+        }
+        return ViewDrawNone, nil, nil
 }

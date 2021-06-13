@@ -43,6 +43,12 @@ type DiffView struct {
         LeftTree        *DiffTree
         RightTree       *DiffTree
         Content         *DiffLines
+        FocusStack      []FocusPos
+}
+
+type FocusPos struct {
+        Base    int
+        Focus   int
 }
 
 //This is file/directory item that is part of DiffTree

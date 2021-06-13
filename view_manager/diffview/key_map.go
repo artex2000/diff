@@ -21,6 +21,7 @@ var NormalModeMap = []UserKeyMap {
         { "<S-G>",      CmdMoveBottom,    "" },
         { "<Enter>",    CmdEnter,    "" },
         { "<Esc>",      CmdQuit,     "" },
+        { "<S-/>",      CmdQuery,     "" },
 }
 
 func (rv *DiffView) GetKeyboardMap() (normal, insert []UserKeyMap) {

@@ -33,7 +33,7 @@ func (fv *FileView) ProcessKeyEvent(kc KeyCommand) int {
         } else {
                 cmd = kc.(int)
         }
-        log.Printf("Received: %v\n", GetCommandName(cmd))
+//        log.Printf("Received: %v\n", GetCommandName(cmd))
 
         switch cmd {
         case CmdQuit:

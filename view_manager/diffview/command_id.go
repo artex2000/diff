@@ -13,6 +13,7 @@ const (
         CmdHelp
         CmdEnter
         CmdQuit
+        CmdQuery
 )
 
 var CommandName = []string {
@@ -28,6 +29,7 @@ var CommandName = []string {
         "CmdHelp",
         "CmdEnter",
         "CmdQuit",
+        "CmdQuery",
 }
 
 func GetCommandName(cmd int) string {
