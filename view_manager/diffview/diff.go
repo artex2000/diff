@@ -591,13 +591,10 @@ func (di *DiffTree) GetName() (ds string) {
         return
 }
 
-func (dv *DiffView) GetDiffTreeFromContent(p int) (left, right *DiffTree) {
+func (dv *DiffView) GetDiffTreeFromContent() (left, right *DiffTree) {
         //idx := dv.BaseIndex + dv.FocusLine
         idx  := 0
-        goal := p
-        if goal < 0 {
-                goal = dv.BaseIndex + dv.FocusLine
-        }
+        goal := dv.BaseIndex + dv.FocusLine
 
         //we need to traverse []*DiffTree list in the same fashion we do when we create
         //content to draw to find corresponding DiffTree item at the FocusLine

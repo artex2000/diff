@@ -43,7 +43,9 @@ type DiffView struct {
         LeftTree        *DiffTree
         RightTree       *DiffTree
         Content         *DiffLines
-        FocusStack      []FocusPos
+        //Tree focus position when we switch from tree view to file view
+        //We don't need a stack here, since it can only be one level deep
+        LastTreeFocus   FocusPos
 }
 
 type FocusPos struct {

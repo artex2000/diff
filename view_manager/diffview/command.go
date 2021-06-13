@@ -1,7 +1,5 @@
 package diffview
 
-import "log"
-
 func (dv *DiffView) MoveUp() (int, interface{}, error) {
         OldPos := dv.FocusLine
         if dv.FocusLine > 0 {
@@ -115,12 +113,13 @@ func (dv *DiffView) ShowDiff() (int, interface{}, error) {
 
         expand_dir := true
 
-        left, right := dv.GetDiffTreeFromContent(-1)
+        left, right := dv.GetDiffTreeFromContent()
         if left == nil {
                 if right.Dir {
                         right.Expanded = !right.Expanded
                         if right.Expanded {
-                               right.Expand(dv.RightPaneRoot)
+                                //if we expand dir re-read and re-hash its members
+                                right.Expand(dv.RightPaneRoot)
                         }
                 } else {
                         expand_dir = false
@@ -129,7 +128,8 @@ func (dv *DiffView) ShowDiff() (int, interface{}, error) {
                 if left.Dir {
                         left.Expanded = !left.Expanded
                         if left.Expanded {
-                               left.Expand(dv.LeftPaneRoot)
+                                //if we expand dir re-read and re-hash its members
+                                left.Expand(dv.LeftPaneRoot)
                         }
                 } else {
                         expand_dir = false
@@ -138,11 +138,13 @@ func (dv *DiffView) ShowDiff() (int, interface{}, error) {
                 if left.Dir {
                         left.Expanded = !left.Expanded
                         if left.Expanded {
-                               left.Expand(dv.LeftPaneRoot)
+                                //if we expand dir re-read and re-hash its members
+                                left.Expand(dv.LeftPaneRoot)
                         }
                         right.Expanded = !right.Expanded
                         if right.Expanded {
-                               right.Expand(dv.RightPaneRoot)
+                                //if we expand dir re-read and re-hash its members
+                                right.Expand(dv.RightPaneRoot)
                         }
                 } else {
                         expand_dir = false
@@ -153,8 +155,7 @@ func (dv *DiffView) ShowDiff() (int, interface{}, error) {
                 dv.SetContentTree()
         } else {
                 dv.SetContentFile(left.Data.([]string), right.Data.([]string))
-                f := FocusPos{ dv.BaseIndex, dv.FocusLine }
-                dv.FocusStack = append (dv.FocusStack, f)
+                dv.LastTreeFocus = FocusPos{ dv.BaseIndex, dv.FocusLine }
                 dv.BaseIndex, dv.FocusLine = 0, 0
         }
 
@@ -162,9 +163,17 @@ func (dv *DiffView) ShowDiff() (int, interface{}, error) {
 }
 
 func (dv *DiffView) Query() (int, interface{}, error) {
+        /*
         for i := 0; i < len (dv.Content.Left); i += 1 {
                 l, r := dv.GetDiffTreeFromContent(i)
                 log.Printf("%d:\t%s - %s\n", i, l.Name, r.Name)
         }
+        */
         return ViewDrawNone, nil, nil
+}
+
+func (dv *DiffView) RestoreTreeView() (int, interface{}, error) {
+        dv.SetContentTree()
+        dv.BaseIndex, dv.FocusLine = dv.LastTreeFocus.Base, dv.LastTreeFocus.Focus
+        return ViewDrawAll, nil, nil
 }

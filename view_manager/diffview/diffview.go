@@ -61,7 +61,11 @@ func  (dv *DiffView) ProcessKeyEvent(kc KeyCommand) int {
         cmd := kc.(int)
         switch cmd {
         case CmdQuit:
-                return ViewEventClose
+                if dv.Content.Type == StringDiff {
+                        r, extra, err = dv.RestoreTreeView()
+                } else {
+                        return ViewEventClose
+                }
         case CmdQuery:
                 r, extra, err = dv.Query()
         case CmdMoveTop:
