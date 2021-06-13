@@ -86,22 +86,24 @@ func (dv *DiffView) MovePageUp() (int, interface{}, error) {
 }
 
 func (dv *DiffView) MovePageDown() (int, interface{}, error) {
-        if dv.BaseIndex + dv.Rows >= len (dv.Content.Left) {
-                if dv.FocusLine == dv.Rows {
-                        return ViewDrawNone, nil, nil
-                } else {
-                        OldPos := dv.FocusLine
-                        dv.FocusLine = dv.Rows
-                        return ViewDrawFocusChange, OldPos, nil
-                }
-        } else {
-                tail := len (dv.Content.Left) - (dv.BaseIndex + dv.Rows)
-                if tail > dv.Rows {
-                        dv.BaseIndex += dv.Rows
-                } else {
-                        dv.BaseIndex += tail
-                }
+        OldPos := dv.FocusLine
+        lines_left := len (dv.Content.Left) - dv.BaseIndex - dv.FocusLine - 1 //line currently focused accounted for
+        if lines_left > dv.Rows {
+                //we have enough lines to scroll page down
+                //keep focus line the same and move base index
+                dv.BaseIndex += dv.Rows
                 return ViewDrawAll, nil, nil
+        } else {
+                if lines_left < (dv.Rows - dv.FocusLine) {
+                        //all lines are visible on the screen
+                        dv.FocusLine += lines_left
+                        return ViewDrawFocusChange, OldPos, nil
+                } else {
+                        //we have something off screen at the bottom but not enough for 
+                        //the full page scroll
+                        dv.BaseIndex += lines_left
+                        return ViewDrawAll, nil, nil
+                }
         }
 }
 

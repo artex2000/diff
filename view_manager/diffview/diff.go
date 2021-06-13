@@ -598,7 +598,6 @@ func (dv *DiffView) GetDiffTreeFromContent(p int) (left, right *DiffTree) {
         if goal < 0 {
                 goal = dv.BaseIndex + dv.FocusLine
         }
-        log.Printf("--------- getting %d\n", goal)
 
         //we need to traverse []*DiffTree list in the same fashion we do when we create
         //content to draw to find corresponding DiffTree item at the FocusLine
@@ -663,13 +662,14 @@ func (dv *DiffView) GetDiffTreeFromContent(p int) (left, right *DiffTree) {
                                         r_idx = 0
                                 }
 
+                                /*
                                 if idx == goal {
                                         break OUTER
                                 }
+                                */
                         }
                 }
 
-                log.Println("pop")
                 t := stack[len (stack) - 1]
                 stack = stack[: len (stack) - 1]
                 l = t.Left
@@ -678,7 +678,7 @@ func (dv *DiffView) GetDiffTreeFromContent(p int) (left, right *DiffTree) {
                 r_idx = t.RightIndex
         }
 
-        log.Printf("fin: len l %d, len r %d, l_idx %d, r_idx %d, cnt %d, goal %d\n", len (l), len (r), l_idx, r_idx, idx, goal)
+        //log.Printf("fin: len l %d, len r %d, l_idx %d, r_idx %d, cnt %d, goal %d\n", len (l), len (r), l_idx, r_idx, idx, goal)
         //hopefully we're at correct index
         //l, r, l_idx and r_idx point to right item, except we have to check
         //if there was Insert - in this case one side must be ignored
